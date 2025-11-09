@@ -16,6 +16,7 @@ import {
   typography,
   spacing,
   responsive,
+  layout,
 } from '../styles/constants';
 
 export default function HelpScreen({ navigation }: NavigationProps) {
@@ -141,16 +142,16 @@ const styles = StyleSheet.create({
   header: {
     paddingTop: spacing.md,
     paddingBottom: spacing.lg,
-    paddingHorizontal: spacing.lg,
+    paddingHorizontal: layout.containerPadding,
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   backButton: {
-    width: responsive.hp('6%'),
-    height: responsive.hp('6%'),
-    borderRadius: responsive.hp('3%'),
+    width: responsive.iconSize(6),
+    height: responsive.iconSize(6),
+    borderRadius: responsive.iconSize(6) / 2,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -173,11 +174,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: layout.containerPadding,
     paddingBottom: spacing.xl,
   },
   helpCard: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.cardSpacing,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   cardTitle: {

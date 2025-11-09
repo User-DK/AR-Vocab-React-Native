@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,21 @@ import {
   Dimensions,
   Animated,
   Platform,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import Sound from "react-native-sound";
-import LinearGradient from "react-native-linear-gradient";
-import ARModelViewer from "../components/ARModelViewer";
-import RNFS from "react-native-fs";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import Sound from 'react-native-sound';
+import LinearGradient from 'react-native-linear-gradient';
+import ARModelViewer from '../components/ARModelViewer';
+import { getSoundAsset } from '../utils/assetLoader';
+import {
+  colors,
+  typography,
+  spacing,
+  borderRadius,
+  shadows,
+  responsive,
+  layout,
+} from '../styles/constants';
 
 // Default vocabulary data structure
 const defaultVocabularyData: VocabularyData = {
@@ -30,7 +39,7 @@ interface ARLearningScreenProps {
   };
 }
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface VocabularyItem {
   id: string;
@@ -45,7 +54,7 @@ interface VocabularyItem {
   position: [number, number, number];
   rotation: [number, number, number];
   animations: string[];
-  difficulty: "easy" | "medium" | "hard";
+  difficulty: 'easy' | 'medium' | 'hard';
   description: string;
 }
 
@@ -68,11 +77,11 @@ export default function ARLearningScreen({
 }: ARLearningScreenProps) {
   const { category: categoryId } = route.params; // Rename the parameter to match our usage
   const [currentItemIndex, setCurrentItemIndex] = useState(0);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const [sound, setSound] = useState<Sound | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [showSparkle, setShowSparkle] = useState(false);
   const [vocabularyData, setVocabularyData] = useState<VocabularyData>(
-    defaultVocabularyData
+    defaultVocabularyData,
   );
 
   // Animation values for Figma-based UI
@@ -82,31 +91,41 @@ export default function ARLearningScreen({
 
   useEffect(() => {
     loadVocabularyData();
+
+    // Enable playback in silence mode (iOS)
+    Sound.setCategory('Playback');
+
+    return () => {
+      // Cleanup sound on unmount
+      if (sound) {
+        sound.release();
+      }
+    };
   }, []);
 
   const loadVocabularyData = async () => {
     try {
       // Load the vocabulary data from the bundled asset
-      const data = require("../../assets/ar/vocabulary-data.json");
-      console.log("Loaded vocabulary data:", JSON.stringify(data, null, 2));
+      const data = require('../../assets/ar/vocabulary-data.json');
+      console.log('Loaded vocabulary data:', JSON.stringify(data, null, 2));
       if (!data || !data.categories) {
-        throw new Error("Invalid vocabulary data structure");
+        throw new Error('Invalid vocabulary data structure');
       }
       setVocabularyData(data);
     } catch (error) {
-      console.error("Error loading vocabulary data:", error);
-      Alert.alert("Error", "Failed to load vocabulary data. Please try again.");
+      console.error('Error loading vocabulary data:', error);
+      Alert.alert('Error', 'Failed to load vocabulary data. Please try again.');
     }
   };
 
   // Debug category matching
-  console.log("Detailed Debug Info:");
-  console.log("1. Received categoryId:", categoryId);
-  console.log("2. Category ID type:", typeof categoryId);
+  console.log('Detailed Debug Info:');
+  console.log('1. Received categoryId:', categoryId);
+  console.log('2. Category ID type:', typeof categoryId);
 
   // Safety check for categoryId
   if (!categoryId) {
-    console.error("Category ID is undefined or null");
+    console.error('Category ID is undefined or null');
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.errorContainer}>
@@ -130,7 +149,7 @@ export default function ARLearningScreen({
   }
 
   console.log(
-    "3. Available categories:",
+    '3. Available categories:',
     JSON.stringify(
       vocabularyData.categories.map((cat: VocabularyCategory) => ({
         id: cat.id,
@@ -138,31 +157,31 @@ export default function ARLearningScreen({
         items: cat.items?.length || 0,
       })),
       null,
-      2
-    )
+      2,
+    ),
   );
 
   const categoryData = vocabularyData.categories.find(
     (cat: VocabularyCategory) =>
-      cat.id && categoryId && cat.id.toLowerCase() === categoryId.toLowerCase()
+      cat.id && categoryId && cat.id.toLowerCase() === categoryId.toLowerCase(),
   );
 
   console.log(
-    "4. Found category data:",
+    '4. Found category data:',
     categoryData
       ? {
           id: categoryData.id,
           name: categoryData.name,
           itemCount: categoryData.items?.length,
         }
-      : "No matching category"
+      : 'No matching category',
   );
 
   const items = categoryData?.items || [];
-  console.log("5. Items in category:", items.length);
+  console.log('5. Items in category:', items.length);
 
   const currentItem = items[currentItemIndex];
-  console.log("Current item:", currentItem);
+  console.log('Current item:', currentItem);
 
   useEffect(() => {
     // Start floating animation
@@ -178,7 +197,7 @@ export default function ARLearningScreen({
           duration: 2000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
 
     // Grid pulsing animation
@@ -194,7 +213,7 @@ export default function ARLearningScreen({
           duration: 1500,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -218,50 +237,117 @@ export default function ARLearningScreen({
     if (!currentItem?.soundPath || isPlaying) return;
 
     try {
-      setIsPlaying(true);
-      const { sound } = await Audio.Sound.createAsync(
-        require("../../assets/audio/apple.mp3") // Fallback audio
-      );
-      setSound(sound);
-      await sound.playAsync();
-      triggerSparkle();
+      // Release previous sound if exists
+      if (sound) {
+        sound.release();
+        setSound(null);
+      }
 
-      sound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
+      setIsPlaying(true);
+      console.log('🔊 Playing sound for:', currentItem.word);
+      console.log('🔊 Sound path from JSON:', currentItem.soundPath);
+
+      /**
+       * PROPER SOUND LOADING FOR REACT-NATIVE-SOUND
+       *
+       * Uses require() to ensure Metro bundler includes the asset.
+       * The assetLoader utility maps JSON string paths to proper require() calls.
+       */
+
+      // Get the proper require() reference for this sound path
+      const soundAsset = getSoundAsset(currentItem.soundPath);
+
+      if (!soundAsset) {
+        console.warn(
+          `⚠️ Sound file not found in asset mapping: ${currentItem.soundPath}`,
+        );
+        Alert.alert(
+          'Audio Not Available',
+          `Sound file for "${currentItem.word}" is not yet added.\n\nTo add sounds:\n1. Place MP3 files in assets/ar/sounds/\n2. Add them to SOUND_ASSETS in src/utils/assetLoader.ts\n3. Rebuild the app`,
+        );
+        setIsPlaying(false);
+        return;
+      }
+
+      console.log('✅ Sound asset loaded via require()');
+
+      // Load sound using the require() reference
+      const soundFile = new Sound(soundAsset, error => {
+        if (error) {
+          console.error('❌ Failed to load sound:', error);
+          Alert.alert(
+            'Audio Error',
+            `Failed to load sound for "${currentItem.word}". Please try again.`,
+          );
           setIsPlaying(false);
+          return;
         }
+
+        console.log('✅ Sound file loaded successfully');
+        console.log('Duration:', soundFile.getDuration(), 'seconds');
+
+        // Play the sound
+        soundFile.play(success => {
+          if (success) {
+            console.log('✅ Sound played successfully');
+            triggerSparkle();
+          } else {
+            console.log('⚠️ Sound playback failed');
+          }
+          setIsPlaying(false);
+        });
+
+        setSound(soundFile);
       });
     } catch (error) {
-      console.error("Error playing sound:", error);
+      console.error('Error playing sound:', error);
+      Alert.alert('Audio Error', 'Failed to play sound. Please try again.');
       setIsPlaying(false);
     }
   };
 
   const handleNext = () => {
+    // Stop current sound if playing
+    if (sound) {
+      sound.stop();
+      sound.release();
+      setSound(null);
+      setIsPlaying(false);
+    }
+
     if (currentItemIndex < items.length - 1) {
       setCurrentItemIndex(currentItemIndex + 1);
     } else {
       Alert.alert(
-        "Congratulations!",
-        "You have completed all words in this category!",
-        [{ text: "OK", onPress: () => navigation.goBack() }]
+        'Congratulations!',
+        'You have completed all words in this category!',
+        [{ text: 'OK', onPress: () => navigation.goBack() }],
       );
     }
   };
 
   const handlePrevious = () => {
+    // Stop current sound if playing
+    if (sound) {
+      sound.stop();
+      sound.release();
+      setSound(null);
+      setIsPlaying(false);
+    }
+
     if (currentItemIndex > 0) {
       setCurrentItemIndex(currentItemIndex - 1);
     }
   };
 
+  // Cleanup sound when item changes
   useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
+    return () => {
+      if (sound) {
+        sound.release();
+      }
+    };
+  }, [currentItemIndex]);
 
   if (!currentItem) {
     return (
@@ -301,7 +387,7 @@ export default function ARLearningScreen({
     <View style={styles.container}>
       {/* Camera Background Simulation */}
       <LinearGradient
-        colors={["#1F2937", "#374151", "#4B5563"]}
+        colors={['#1F2937', '#374151', '#4B5563']}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.backgroundGradient}
@@ -359,9 +445,9 @@ export default function ARLearningScreen({
               scale: currentItem.scale as [number, number, number],
               position: currentItem.position as [number, number, number],
               rotation: currentItem.rotation as [number, number, number],
-              difficulty: currentItem.difficulty as "easy" | "medium" | "hard",
+              difficulty: currentItem.difficulty as 'easy' | 'medium' | 'hard',
             }}
-            onModelLoaded={() => console.log("Model loaded:", currentItem.word)}
+            onModelLoaded={() => console.log('Model loaded:', currentItem.word)}
             onModelTapped={playSound}
           />
         </View>
@@ -406,11 +492,11 @@ export default function ARLearningScreen({
             disabled={isPlaying}
           >
             <LinearGradient
-              colors={["#667eea", "#764ba2"]}
+              colors={['#667eea', '#764ba2']}
               style={styles.buttonGradient}
             >
               <Icon
-                name={isPlaying ? "volume-high" : "volume-high-outline"}
+                name={isPlaying ? 'volume-high' : 'volume-high-outline'}
                 size={24}
                 color="white"
               />
@@ -420,7 +506,7 @@ export default function ARLearningScreen({
 
           <TouchableOpacity onPress={handleNext} style={styles.controlButton}>
             <LinearGradient
-              colors={["#11998e", "#38ef7d"]}
+              colors={['#11998e', '#38ef7d']}
               style={styles.buttonGradient}
             >
               <Icon name="play-skip-forward" size={24} color="white" />
@@ -433,7 +519,7 @@ export default function ARLearningScreen({
             style={styles.controlButton}
           >
             <LinearGradient
-              colors={["#bdc3c7", "#95a5a6"]}
+              colors={['#bdc3c7', '#95a5a6']}
               style={styles.buttonGradient}
             >
               <Icon name="close" size={24} color="white" />
@@ -462,30 +548,30 @@ export default function ARLearningScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1F2937",
+    backgroundColor: colors.background,
   },
   errorContainer: {
     flex: 1,
-    padding: 20,
-    alignItems: "flex-start",
+    padding: layout.containerPadding,
+    alignItems: 'flex-start',
   },
   errorContent: {
     flex: 1,
-    width: "100%",
-    justifyContent: "center",
-    alignItems: "center",
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   errorText: {
-    color: "white",
-    fontSize: 18,
-    fontWeight: "bold",
-    textAlign: "center",
-    marginBottom: 8,
+    color: colors.foreground,
+    fontSize: typography.fontSizes.lg,
+    fontWeight: typography.fontWeights.bold,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
   },
   errorSubtext: {
-    color: "rgba(255, 255, 255, 0.7)",
-    fontSize: 14,
-    textAlign: "center",
+    color: colors.mutedForeground,
+    fontSize: typography.fontSizes.sm,
+    textAlign: 'center',
   },
   backgroundGradient: {
     ...StyleSheet.absoluteFillObject,
@@ -497,34 +583,38 @@ const styles = StyleSheet.create({
     opacity: 0.2,
   },
   orb: {
-    position: "absolute",
+    position: 'absolute',
     borderRadius: 999,
   },
   blueOrb: {
-    top: 40,
-    left: 40,
-    width: 128,
-    height: 128,
-    backgroundColor: "#3B82F6",
+    top: spacing.xl,
+    left: spacing.xl,
+    width: responsive.avatarSize(16),
+    height: responsive.avatarSize(16),
+    backgroundColor: colors.gradients.blue[0],
     transform: [{ scale: 2 }],
     opacity: 0.6,
   },
   purpleOrb: {
-    bottom: 80,
-    right: 40,
-    width: 160,
-    height: 160,
-    backgroundColor: "#8B5CF6",
+    bottom: spacing['2xl'],
+    right: spacing.xl,
+    width: responsive.avatarSize(20),
+    height: responsive.avatarSize(20),
+    backgroundColor: colors.gradients.purple[0],
     transform: [{ scale: 2 }],
     opacity: 0.6,
   },
   greenOrb: {
-    top: "50%",
-    left: "50%",
-    width: 256,
-    height: 256,
-    backgroundColor: "#10B981",
-    transform: [{ scale: 2 }, { translateX: -128 }, { translateY: -128 }],
+    top: '50%',
+    left: '50%',
+    width: responsive.avatarSize(32),
+    height: responsive.avatarSize(32),
+    backgroundColor: colors.gradients.green[0],
+    transform: [
+      { scale: 2 },
+      { translateX: -responsive.avatarSize(32) / 2 },
+      { translateY: -responsive.avatarSize(32) / 2 },
+    ],
     opacity: 0.3,
   },
   gridOverlay: {
@@ -533,188 +623,191 @@ const styles = StyleSheet.create({
     opacity: 0.1,
   },
   gridLine: {
-    position: "absolute",
+    position: 'absolute',
     left: 0,
     right: 0,
     height: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   gridLineVertical: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     bottom: 0,
     width: 1,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   safeArea: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     zIndex: 5,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: layout.containerPadding,
+    paddingVertical: spacing.md,
     zIndex: 10,
   },
   backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    overflow: "hidden",
+    width: responsive.iconSize(12),
+    height: responsive.iconSize(12),
+    borderRadius: responsive.iconSize(12) / 2,
+    overflow: 'hidden',
   },
   backButtonContainer: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    padding: 12,
-    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: spacing.sm,
+    borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...shadows.md,
   },
   headerInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 24,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.xl,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    ...shadows.md,
   },
   headerTitle: {
-    color: "white",
-    fontSize: 14,
-    fontWeight: "600",
-    marginLeft: 8,
+    color: colors.card,
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.semibold,
+    marginLeft: spacing.sm,
   },
   headerSubtitle: {
-    color: "rgba(255, 255, 255, 0.8)",
-    fontSize: 14,
-    fontWeight: "500",
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: typography.fontSizes.sm,
+    fontWeight: typography.fontWeights.medium,
   },
   headerSpacer: {
-    width: 50,
+    width: responsive.iconSize(12),
   },
   arContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    zIndex: 2,
-    marginTop: 60,
-    marginBottom: 200,
-    backgroundColor: "transparent",
-  },
-  arViewerContainer: {
-    position: "absolute",
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "transparent",
-    overflow: "hidden",
+    zIndex: 2,
+    backgroundColor: 'transparent',
+  },
+  arViewerContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+    overflow: 'hidden',
   },
   objectDisplayArea: {
-    alignItems: "center",
-    justifyContent: "center",
-    position: "absolute",
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   sparkleContainer: {
-    position: "absolute",
+    position: 'absolute',
     zIndex: 10,
   },
   objectFrame: {
-    width: 200,
-    height: 200,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
+    width: responsive.avatarSize(25),
+    height: responsive.avatarSize(25),
+    borderRadius: borderRadius['2xl'],
+    justifyContent: 'center',
+    alignItems: 'center',
     borderWidth: 4,
-    borderColor: "rgba(255, 255, 255, 0.3)",
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
-    position: "relative",
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    position: 'relative',
+    ...shadows.xl,
   },
   arMarker: {
-    position: "absolute",
-    width: 24,
-    height: 24,
-    borderColor: "#00ffff",
+    position: 'absolute',
+    width: responsive.iconSize(3),
+    height: responsive.iconSize(3),
+    borderColor: colors.gradients.teal[0],
   },
   arMarkerTopLeft: {
-    top: 8,
-    left: 8,
+    top: spacing.sm,
+    left: spacing.sm,
     borderTopWidth: 4,
     borderLeftWidth: 4,
   },
   arMarkerTopRight: {
-    top: 8,
-    right: 8,
+    top: spacing.sm,
+    right: spacing.sm,
     borderTopWidth: 4,
     borderRightWidth: 4,
   },
   arMarkerBottomLeft: {
-    bottom: 8,
-    left: 8,
+    bottom: spacing.sm,
+    left: spacing.sm,
     borderBottomWidth: 4,
     borderLeftWidth: 4,
   },
   arMarkerBottomRight: {
-    bottom: 8,
-    right: 8,
+    bottom: spacing.sm,
+    right: spacing.sm,
     borderBottomWidth: 4,
     borderRightWidth: 4,
   },
   emojiContainer: {
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   emoji: {
-    fontSize: 80,
+    fontSize: typography.fontSizes['4xl'] * 2,
   },
   wordInfoCard: {
-    marginHorizontal: 20,
-    marginBottom: 30,
-    borderRadius: 30,
-    paddingVertical: 24,
-    paddingHorizontal: 24,
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    marginHorizontal: layout.containerPadding,
+    marginBottom: spacing.xl,
+    borderRadius: borderRadius['3xl'],
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.lg,
     zIndex: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.95)",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 24,
-    elevation: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    ...shadows.xl,
   },
   wordInfo: {
-    alignItems: "center",
-    marginBottom: 24,
+    alignItems: 'center',
+    marginBottom: spacing.lg,
   },
   instructionText: {
-    color: "rgba(0, 0, 0, 0.5)",
-    fontSize: 14,
-    marginBottom: 8,
-    fontWeight: "500",
+    color: colors.mutedForeground,
+    fontSize: typography.fontSizes.sm,
+    marginBottom: spacing.sm,
+    fontWeight: typography.fontWeights.medium,
   },
   wordText: {
-    color: "#7C3AED",
+    color: '#7C3AED',
     fontSize: 32,
-    fontWeight: "bold",
+    fontWeight: 'bold',
     marginBottom: 8,
     letterSpacing: 0.5,
   },
   pronunciationText: {
-    color: "rgba(0, 0, 0, 0.6)",
+    color: 'rgba(0, 0, 0, 0.6)',
     fontSize: 16,
-    fontWeight: "500",
+    fontWeight: '500',
   },
   controls: {
-    flexDirection: "row",
+    flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
   },
@@ -722,8 +815,8 @@ const styles = StyleSheet.create({
     flex: 1,
     height: 64,
     borderRadius: 16,
-    overflow: "hidden",
-    shadowColor: "#000",
+    overflow: 'hidden',
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -731,34 +824,33 @@ const styles = StyleSheet.create({
   },
   buttonGradient: {
     flex: 1,
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 6,
-    paddingVertical: 12,
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
   },
   buttonText: {
-    color: "white",
-    fontSize: 12,
-    fontWeight: "600",
+    color: colors.card,
+    fontSize: typography.fontSizes.xs,
+    fontWeight: typography.fontWeights.semibold,
     letterSpacing: 0.5,
   },
   progressContainer: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 8,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: spacing.sm,
   },
   progressDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "rgba(0, 0, 0, 0.2)",
+    width: spacing.sm,
+    height: spacing.sm,
+    borderRadius: spacing.sm / 2,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   progressDotActive: {
-    width: 32,
-    backgroundColor: "#7C3AED",
+    width: spacing.xl,
+    backgroundColor: colors.primary,
     transform: [{ scaleY: 1.1 }],
   },
 });
-

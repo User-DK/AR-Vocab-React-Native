@@ -6,7 +6,7 @@ import { colors, typography, borderRadius, spacing } from '../styles/constants';
 interface BadgeProps {
   children: React.ReactNode;
   variant?: 'default' | 'gradient';
-  gradient?: readonly [string, string, ...string[]];
+  gradient?: string[];
   style?: ViewStyle;
   textStyle?: TextStyle;
 }
@@ -14,14 +14,14 @@ interface BadgeProps {
 export default function Badge({ 
   children, 
   variant = 'default',
-  gradient = colors.gradients.blue,
+  gradient = [...colors.gradients.blue],
   style,
   textStyle 
 }: BadgeProps) {
   if (variant === 'gradient') {
     return (
       <LinearGradient
-        colors={gradient}
+        colors={[...gradient]}
         style={[styles.badge, style]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 0 }}

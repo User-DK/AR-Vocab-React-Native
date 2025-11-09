@@ -21,6 +21,7 @@ import {
   borderRadius,
   shadows,
   responsive,
+  layout,
 } from '../styles/constants';
 
 export default function HomeScreen({ navigation }: NavigationProps) {
@@ -100,13 +101,13 @@ export default function HomeScreen({ navigation }: NavigationProps) {
 
             {/* Badges */}
             <View style={styles.badgeContainer}>
-              <Badge variant="gradient" gradient={colors.gradients.blue}>
+              <Badge variant="gradient" gradient={[...colors.gradients.blue]}>
                 🦁 Animal Master
               </Badge>
-              <Badge variant="gradient" gradient={colors.gradients.green}>
+              <Badge variant="gradient" gradient={[...colors.gradients.green]}>
                 🍎 Fruit Expert
               </Badge>
-              <Badge variant="gradient" gradient={colors.gradients.orange}>
+              <Badge variant="gradient" gradient={[...colors.gradients.orange]}>
                 ⭐ 7-Day Streak
               </Badge>
             </View>
@@ -190,7 +191,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: layout.containerPadding,
     paddingBottom: spacing.xl,
   },
   header: {
@@ -204,9 +205,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   avatar: {
-    width: responsive.hp('8%'),
-    height: responsive.hp('8%'),
-    borderRadius: responsive.hp('4%'),
+    width: responsive.avatarSize(8),
+    height: responsive.avatarSize(8),
+    borderRadius: responsive.avatarSize(8) / 2,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: spacing.md,
@@ -232,16 +233,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   settingsButton: {
-    width: responsive.hp('6%'),
-    height: responsive.hp('6%'),
-    borderRadius: responsive.hp('3%'),
+    width: responsive.iconSize(6),
+    height: responsive.iconSize(6),
+    borderRadius: responsive.iconSize(6) / 2,
     backgroundColor: colors.card,
     justifyContent: 'center',
     alignItems: 'center',
     ...shadows.md,
   },
   statsCard: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.cardSpacing,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   statsGrid: {
@@ -253,9 +254,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statIcon: {
-    width: responsive.hp('8%'),
-    height: responsive.hp('8%'),
-    borderRadius: responsive.hp('4%'),
+    width: responsive.iconSize(8),
+    height: responsive.iconSize(8),
+    borderRadius: responsive.iconSize(8) / 2,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: spacing.sm,
@@ -286,7 +287,7 @@ const styles = StyleSheet.create({
   badgeContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: layout.cardSpacing,
   },
   navigationGrid: {
     flexDirection: 'row',
@@ -296,10 +297,10 @@ const styles = StyleSheet.create({
   },
   navButton: {
     width: '48%',
-    marginBottom: spacing.md,
+    marginBottom: layout.buttonSpacing,
   },
   navButtonGradient: {
-    height: responsive.hp('16%'),
+    height: responsive.buttonHeight(16),
     borderRadius: borderRadius['3xl'],
     justifyContent: 'center',
     alignItems: 'center',

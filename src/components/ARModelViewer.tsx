@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -7,9 +7,14 @@ import {
   Alert,
   TouchableOpacity,
   ActivityIndicator,
-} from "react-native";
-import Icon from "react-native-vector-icons/Ionicons";
-import { VocabularyItem } from "../types/vocabulary";
+} from 'react-native';
+import Icon from 'react-native-vector-icons/Ionicons';
+import { VocabularyItem } from '../types/vocabulary';
+import {
+  getModelAsset,
+  getMaterialAsset,
+  getModelType,
+} from '../utils/assetLoader';
 
 // ViroReact - Best cross-platform AR solution for React Native
 // Install: npm install @reactvision/react-viro
@@ -23,7 +28,9 @@ import {
   ViroNode,
   ViroAnimations,
   ViroARTrackingTargets,
-} from "@reactvision/react-viro";
+  ViroBox,
+  ViroMaterials,
+} from '@reactvision/react-viro';
 
 interface ARModelViewerProps {
   item: VocabularyItem;
@@ -44,6 +51,29 @@ interface ARModelViewerProps {
  *    <key>NSCameraUsageDescription</key>
  *    <string>AR features require camera access</string>
  */
+/**
+ * ARModelViewer Component
+ *
+ * Real AR implementation using ViroReact (@reactvision/react-viro)
+ *
+ * SUPPORTED MODEL FORMATS:
+ * - GLB (Binary glTF) - Recommended for best performance
+ * - GLTF (Text glTF)
+ * - OBJ (Wavefront OBJ + MTL)
+ *
+ * FEATURES:
+ * - Automatic surface detection via ARKit/ARCore
+ * - Tap-to-place 3D models on detected planes
+ * - Model rotation animation
+ * - Touch interaction support
+ * - Fallback rendering on error
+ * - Full-screen AR camera view
+ *
+ * REQUIREMENTS:
+ * - iOS: ARKit support (iOS 11+)
+ * - Android: ARCore support (Android 7.0+)
+ * - Camera permissions configured
+ */
 export const ARModelViewer: React.FC<ARModelViewerProps> = ({
   item,
   onModelLoaded,
@@ -52,6 +82,7 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
   const [arSupported, setArSupported] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [trackingInitialized, setTrackingInitialized] = useState(false);
+  const [modelPlaced, setModelPlaced] = useState(false);
 
   useEffect(() => {
     checkARSupport();
@@ -64,10 +95,10 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
       setArSupported(true);
       setIsLoading(false);
     } catch (error) {
-      console.error("AR Support Check Failed:", error);
+      console.error('AR Support Check Failed:', error);
       Alert.alert(
-        "AR Not Supported",
-        "This device does not support AR features. Please use a device with ARCore (Android) or ARKit (iOS) support."
+        'AR Not Supported',
+        'This device does not support AR features. Please use a device with ARCore (Android) or ARKit (iOS) support.',
       );
       setArSupported(false);
       setIsLoading(false);
@@ -98,6 +129,7 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
               onModelLoaded={onModelLoaded}
               onModelTapped={onModelTapped}
               onTrackingInitialized={() => setTrackingInitialized(true)}
+              onModelPlaced={placed => setModelPlaced(placed)}
             />
           ),
         }}
@@ -114,12 +146,24 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
         </View>
       )}
 
+      {/* Model Placed Indicator */}
+      {trackingInitialized && !modelPlaced && (
+        <View style={styles.trackingOverlay}>
+          <Icon name="hand-left-outline" size={24} color="#ffffff" />
+          <Text style={styles.trackingText}>
+            Tap any flat surface to place model
+          </Text>
+        </View>
+      )}
+
       {/* AR Instructions */}
       <View style={styles.instructionsOverlay}>
         <View style={styles.instructionBadge}>
           <Icon name="scan" size={20} color="#ffffff" />
           <Text style={styles.instructionText}>
-            Tap detected surface to place {item.word}
+            {!trackingInitialized
+              ? 'Move device to detect surfaces...'
+              : 'Tap surface to place ' + item.word}
           </Text>
         </View>
       </View>
@@ -135,6 +179,7 @@ interface ARSceneComponentProps {
   onModelLoaded?: () => void;
   onModelTapped?: () => void;
   onTrackingInitialized: () => void;
+  onModelPlaced: (placed: boolean) => void;
 }
 
 const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
@@ -142,31 +187,58 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
   onModelLoaded,
   onModelTapped,
   onTrackingInitialized,
+  onModelPlaced,
 }) => {
   const [modelPlaced, setModelPlaced] = useState(false);
   const [modelPosition, setModelPosition] = useState([0, 0, -1]);
+  const [modelLoadError, setModelLoadError] = useState(false);
+
+  // Get model type using utility function
+  const modelFileType = getModelType(item.modelPath);
 
   const handleModelLoad = useCallback(() => {
-    console.log(`✅ Loaded OBJ model: ${item.modelPath}`);
+    console.log(
+      `✅ Successfully loaded ${modelFileType} model: ${item.modelPath}`,
+    );
+    console.log(`Model word: ${item.word}`);
+    setModelLoadError(false);
     onModelLoaded?.();
-  }, [item.modelPath, onModelLoaded]);
+  }, [item.modelPath, item.word, modelFileType, onModelLoaded]);
 
   const handleModelError = useCallback(
     (error: any) => {
-      console.error("❌ Model loading error:", error);
-      Alert.alert("Model Loading Failed", `Could not load ${item.word} model`);
+      console.error('❌ Model loading error:', error);
+      console.error('Model path:', item.modelPath);
+      console.error('Model type:', modelFileType);
+      console.error('Item:', item);
+      setModelLoadError(true);
+      Alert.alert(
+        'Model Loading Failed',
+        `Could not load ${item.word} model.\n\nType: ${modelFileType}\nPath: ${item.modelPath}\n\nShowing fallback emoji instead.`,
+        [{ text: 'OK' }],
+      );
     },
-    [item.word]
+    [item.word, item.modelPath, modelFileType, item],
   );
 
   const handlePlaneClick = useCallback(
     (position: number[]) => {
-      console.log("📍 Surface detected at:", position);
+      console.log('📍 Surface detected at:', position);
+      console.log('🎯 Placing model:', item.word);
+      console.log('📦 Model type:', modelFileType);
+      console.log('📂 Model path:', item.modelPath);
       setModelPosition(position);
       setModelPlaced(true);
+      onModelPlaced(true);
       onTrackingInitialized();
     },
-    [onTrackingInitialized]
+    [
+      onTrackingInitialized,
+      onModelPlaced,
+      item.word,
+      item.modelPath,
+      modelFileType,
+    ],
   );
 
   const handleModelTap = useCallback(() => {
@@ -175,45 +247,117 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
   }, [item.word, onModelTapped]);
 
   // Register animations
-  ViroAnimations.registerAnimations({
-    rotate: {
-      properties: {
-        rotateY: "+=90",
+  useEffect(() => {
+    // Register ViroReact animations
+    ViroAnimations.registerAnimations({
+      rotate: {
+        properties: {
+          rotateY: '+=360',
+        },
+        duration: 5000,
+        easing: 'Linear',
       },
-      duration: 2000,
-      easing: "Linear",
-    },
-    scaleUp: {
-      properties: {
-        scaleX: 1.2,
-        scaleY: 1.2,
-        scaleZ: 1.2,
+      scaleUp: {
+        properties: {
+          scaleX: 1.2,
+          scaleY: 1.2,
+          scaleZ: 1.2,
+        },
+        duration: 200,
+        easing: 'EaseOut',
       },
-      duration: 200,
-      easing: "EaseOut",
-    },
-    scaleDown: {
-      properties: {
-        scaleX: 1.0,
-        scaleY: 1.0,
-        scaleZ: 1.0,
+      scaleDown: {
+        properties: {
+          scaleX: 1.0,
+          scaleY: 1.0,
+          scaleZ: 1.0,
+        },
+        duration: 200,
+        easing: 'EaseIn',
       },
-      duration: 200,
-      easing: "EaseIn",
-    },
-    float: {
-      properties: {
-        positionY: "+=0.1",
+      float: {
+        properties: {
+          positionY: '+=0.1',
+        },
+        duration: 1000,
+        easing: 'EaseInOut',
       },
-      duration: 1000,
-      easing: "EaseInOut",
-    },
-  });
+    });
+
+    // Register ViroReact materials
+    ViroMaterials.createMaterials({
+      fallbackMaterial: {
+        lightingModel: 'Blinn',
+        diffuseColor: '#FF6B6B',
+        shininess: 2.0,
+      },
+      shadowMaterial: {
+        lightingModel: 'Blinn',
+        diffuseColor: '#000000',
+        shininess: 0.0,
+      },
+    });
+  }, []);
+
+  const getModelSource = () => {
+    /**
+     * PROPER ASSET LOADING FOR VIRO REACT
+     *
+     * Uses require() to ensure Metro bundler includes the asset in the app bundle.
+     * The assetLoader utility maps JSON string paths to proper require() calls.
+     *
+     * Why this is needed:
+     * - Metro bundler only bundles assets imported via require()
+     * - Dynamic string paths from JSON won't trigger Metro to include files
+     * - ViroReact needs proper asset references, not just string paths
+     */
+
+    console.log(`🎯 Loading model: ${item.word}`);
+    console.log(`📂 Model path from JSON: ${item.modelPath}`);
+    console.log(`🎨 Model type: ${modelFileType}`);
+
+    // Get the proper require() reference for this model path
+    const modelAsset = getModelAsset(item.modelPath);
+
+    if (!modelAsset) {
+      console.error(`❌ Model asset not found in mapping: ${item.modelPath}`);
+      console.error(
+        `This means the asset loader doesn't have a require() entry for this file.`,
+      );
+      console.error(
+        `Add the model to MODEL_ASSETS in src/utils/assetLoader.ts`,
+      );
+      setModelLoadError(true);
+      return null;
+    }
+
+    console.log(`✅ Model asset loaded via require():`, modelAsset);
+    return modelAsset;
+  };
+
+  const getResourcesForOBJ = () => {
+    if (modelFileType !== 'OBJ') return undefined;
+
+    console.log(`🎨 Loading MTL materials for OBJ model`);
+
+    // Get MTL material file using asset loader
+    const mtlAsset = getMaterialAsset(item.modelPath);
+
+    if (!mtlAsset) {
+      console.log(
+        `ℹ️ No MTL file found for ${item.modelPath}, using default materials`,
+      );
+    } else {
+      console.log(`✅ MTL asset loaded via require()`, mtlAsset);
+    }
+
+    return mtlAsset;
+  };
 
   return (
     <ViroARScene onTrackingUpdated={onTrackingInitialized}>
       {/* Ambient lighting for better model visibility */}
-      <ViroAmbientLight color="#ffffff" intensity={200} />
+      <ViroAmbientLight color="#ffffff" intensity={300} />
 
       {/* Directional spotlight */}
       <ViroSpotLight
@@ -223,7 +367,7 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
         position={[0, 5, 1]}
         color="#ffffff"
         castsShadow={true}
-        intensity={500}
+        intensity={700}
       />
 
       {/* AR Plane Selector - Detects horizontal surfaces */}
@@ -238,49 +382,55 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
             dragType="FixedToWorld"
             onDrag={() => {}}
           >
-            {/* Load 3D OBJ Model */}
-            <Viro3DObject
-              source={
-                Platform.OS === "ios"
-                  ? { uri: item.modelPath }
-                  : { uri: `file:///android_asset/${item.modelPath}` }
-              }
-              resources={[
-                Platform.OS === "ios"
-                  ? { uri: item.modelPath.replace(".obj", ".mtl") }
-                  : {
-                      uri: `file:///android_asset/${item.modelPath.replace(
-                        ".obj",
-                        ".mtl"
-                      )}`,
-                    },
-              ]}
-              position={[0, 0, 0]}
-              scale={item.scale}
-              rotation={item.rotation}
-              type="OBJ"
-              materials={[item.textureColor || "default"]}
-              animation={{
-                name: "rotate",
-                run: true,
-                loop: true,
-              }}
-              onLoadEnd={handleModelLoad}
-              onError={handleModelError}
-              onClick={handleModelTap}
-              transformBehaviors={["billboard"]}
-            />
+            {!modelLoadError ? (
+              <>
+                {/* Load 3D Model - Supports GLB, GLTF, and OBJ */}
+                <Viro3DObject
+                  source={getModelSource()}
+                  resources={getResourcesForOBJ()}
+                  position={item.position as [number, number, number]}
+                  scale={item.scale}
+                  rotation={item.rotation}
+                  type={modelFileType}
+                  materials={
+                    modelFileType === 'OBJ' ? [item.textureColor] : undefined
+                  }
+                  animation={{
+                    name: 'rotate',
+                    run: true,
+                    loop: true,
+                  }}
+                  onLoadStart={() => {
+                    console.log(
+                      `⏳ Starting to load ${modelFileType} model: ${item.word}`,
+                    );
+                  }}
+                  onLoadEnd={handleModelLoad}
+                  onError={handleModelError}
+                  onClick={handleModelTap}
+                  lightReceivingBitMask={1}
+                  shadowCastingBitMask={1}
+                />
+              </>
+            ) : (
+              // Fallback: Show emoji if model fails to load
+              <ViroNode position={item.position as [number, number, number]}>
+                <ViroBox
+                  position={[0, 0, 0]}
+                  scale={[0.3, 0.3, 0.3]}
+                  materials={['fallbackMaterial']}
+                  onClick={handleModelTap}
+                />
+              </ViroNode>
+            )}
 
             {/* Shadow plane underneath model */}
             <ViroNode position={[0, -0.01, 0]}>
-              <ViroSpotLight
-                innerAngle={10}
-                outerAngle={20}
-                direction={[0, -1, 0]}
-                position={[0, 3, 0]}
-                color="#000000"
-                castsShadow={true}
-                shadowOpacity={0.3}
+              <ViroBox
+                position={[0, -0.5, 0]}
+                scale={[2, 0.01, 2]}
+                materials={['shadowMaterial']}
+                opacity={0.3}
               />
             </ViroNode>
           </ViroNode>
@@ -301,10 +451,10 @@ const ARFallbackView: React.FC<{ item: VocabularyItem }> = ({ item }) => {
         <Text style={styles.fallbackTitle}>AR Not Available</Text>
         <Text style={styles.fallbackMessage}>
           This device doesn't support AR features.
-          {"\n"}
-          {Platform.OS === "android"
-            ? "ARCore requires Android 7.0+"
-            : "ARKit requires iOS 11+"}
+          {'\n'}
+          {Platform.OS === 'android'
+            ? 'ARCore requires Android 7.0+'
+            : 'ARKit requires iOS 11+'}
         </Text>
         <View style={styles.modelInfo}>
           <Text style={styles.modelEmoji}>{item.emoji}</Text>
@@ -324,7 +474,7 @@ export class ARModelOptimizer {
    */
   static getOptimizedSettings(item: VocabularyItem) {
     return {
-      scale: item.scale.map((s) => s * 0.5), // Smaller for better mobile performance
+      scale: item.scale.map(s => s * 0.5), // Smaller for better mobile performance
       position: [0, 0, -0.5], // Closer to camera
       rotation: item.rotation || [0, 0, 0],
 
@@ -334,9 +484,9 @@ export class ARModelOptimizer {
 
       // Material optimization
       materials: {
-        diffuse: item.textureColor || "#FFFFFF",
+        diffuse: item.textureColor || '#FFFFFF',
         shininess: 0.2,
-        lightingModel: "Blinn",
+        lightingModel: 'Blinn',
       },
     };
   }
@@ -350,7 +500,7 @@ export class ARModelOptimizer {
       console.log(`📦 Preloading model: ${modelPath}`);
       return true;
     } catch (error) {
-      console.error("Preload failed:", error);
+      console.error('Preload failed:', error);
       return false;
     }
   }
@@ -362,8 +512,8 @@ export class ARModelOptimizer {
 export const ARConfig = {
   // Tracking settings
   tracking: {
-    worldAlignment: "Gravity",
-    planeDetection: "Horizontal",
+    worldAlignment: 'Gravity',
+    planeDetection: 'Horizontal',
     autoFocus: true,
   },
 
@@ -379,58 +529,66 @@ export const ARConfig = {
   models: {
     timeout: 10000,
     cacheEnabled: true,
-    supportedFormats: [".obj", ".gltf", ".glb", ".vrx"],
+    supportedFormats: ['.obj', '.gltf', '.glb', '.vrx'],
   },
 };
 
 const styles = StyleSheet.create({
   arScene: {
-    flex: 1,
-    width: "100%",
-    height: "100%",
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
   },
   viroContainer: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#1F2937",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1F2937',
   },
   loadingText: {
     marginTop: 16,
     fontSize: 16,
-    color: "#ffffff",
-    fontWeight: "600",
+    color: '#ffffff',
+    fontWeight: '600',
   },
   trackingOverlay: {
-    position: "absolute",
+    position: 'absolute',
     top: 40,
     left: 0,
     right: 0,
-    alignItems: "center",
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingVertical: 16,
     paddingHorizontal: 24,
   },
   trackingText: {
     marginTop: 8,
     fontSize: 14,
-    color: "#ffffff",
-    textAlign: "center",
+    color: '#ffffff',
+    textAlign: 'center',
   },
   instructionsOverlay: {
-    position: "absolute",
+    position: 'absolute',
     bottom: 40,
     left: 20,
     right: 20,
-    alignItems: "center",
+    alignItems: 'center',
   },
   instructionBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "rgba(79, 70, 229, 0.9)",
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(79, 70, 229, 0.9)',
     paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 24,
@@ -438,41 +596,41 @@ const styles = StyleSheet.create({
   },
   instructionText: {
     fontSize: 14,
-    color: "#ffffff",
-    fontWeight: "600",
+    color: '#ffffff',
+    fontWeight: '600',
   },
   fallbackContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#1F2937",
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1F2937',
     padding: 24,
   },
   fallbackCard: {
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 24,
     padding: 32,
-    alignItems: "center",
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.2)",
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   fallbackTitle: {
     fontSize: 24,
-    fontWeight: "bold",
-    color: "#ffffff",
+    fontWeight: 'bold',
+    color: '#ffffff',
     marginTop: 16,
     marginBottom: 8,
   },
   fallbackMessage: {
     fontSize: 14,
-    color: "#D1D5DB",
-    textAlign: "center",
+    color: '#D1D5DB',
+    textAlign: 'center',
     lineHeight: 20,
     marginBottom: 24,
   },
   modelInfo: {
-    alignItems: "center",
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
     borderRadius: 16,
     padding: 20,
     minWidth: 200,
@@ -483,10 +641,9 @@ const styles = StyleSheet.create({
   },
   modelWord: {
     fontSize: 18,
-    fontWeight: "600",
-    color: "#ffffff",
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });
 
 export default ARModelViewer;
-

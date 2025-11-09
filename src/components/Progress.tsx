@@ -7,21 +7,21 @@ interface ProgressProps {
   value: number; // 0-100
   height?: number;
   style?: ViewStyle;
-  gradient?: readonly [string, string, ...string[]];
+  gradient?: string[];
 }
 
 export default function Progress({ 
   value, 
   height = 8, 
   style,
-  gradient = colors.gradients.blue 
+  gradient = [...colors.gradients.blue] 
 }: ProgressProps) {
   const clampedValue = Math.max(0, Math.min(100, value));
 
   return (
     <View style={[styles.container, { height }, style]}>
       <LinearGradient
-        colors={gradient}
+        colors={[...gradient]}
         style={[
           styles.progress,
           { 

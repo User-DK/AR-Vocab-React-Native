@@ -8,7 +8,7 @@ import {
   GestureResponderEvent,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import { colors, typography, borderRadius, shadows } from '../styles/constants';
+import { colors, typography, borderRadius, shadows, spacing } from '../styles/constants';
 
 interface ButtonProps {
   title: string;
@@ -51,11 +51,11 @@ export default function Button({
 
     switch (size) {
       case 'sm':
-        return { ...baseStyle, paddingHorizontal: 16, paddingVertical: 8 };
+        return { ...baseStyle, paddingHorizontal: spacing.md, paddingVertical: spacing.xs };
       case 'lg':
-        return { ...baseStyle, paddingHorizontal: 32, paddingVertical: 16 };
+        return { ...baseStyle, paddingHorizontal: spacing.xl, paddingVertical: spacing.md };
       default:
-        return { ...baseStyle, paddingHorizontal: 24, paddingVertical: 12 };
+        return { ...baseStyle, paddingHorizontal: spacing.lg, paddingVertical: spacing.sm };
     }
   };
 
@@ -79,7 +79,7 @@ export default function Button({
     if (variant === 'gradient' || gradient) {
       return (
         <LinearGradient
-          colors={gradient || colors.gradients.blue}
+          colors={gradient ? [...gradient] : [...colors.gradients.blue]}
           style={[getButtonStyles(), style]}
         >
           {icon && icon}

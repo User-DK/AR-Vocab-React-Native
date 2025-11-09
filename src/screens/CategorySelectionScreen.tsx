@@ -20,6 +20,7 @@ import {
   borderRadius,
   shadows,
   responsive,
+  layout,
 } from "../styles/constants";
 import { VocabularyCategory, VocabularyData } from "../types/vocabulary";
 
@@ -27,7 +28,7 @@ interface Category {
   id: string;
   name: string;
   icon: string;
-  gradient: readonly [string, string, ...string[]];
+  gradient: string[];
 }
 
 const categories: Category[] = [
@@ -35,34 +36,34 @@ const categories: Category[] = [
     id: "animals",
     name: "Animals",
     icon: "🦁",
-    gradient: colors.gradients.orange,
+    gradient: [...colors.gradients.orange],
   },
-  { id: "fruits", name: "Fruits", icon: "🍎", gradient: colors.gradients.pink },
+  { id: "fruits", name: "Fruits", icon: "🍎", gradient: [...colors.gradients.pink] },
   {
     id: "objects",
     name: "Objects",
     icon: "⚽",
-    gradient: colors.gradients.blue,
+    gradient: [...colors.gradients.blue],
   },
   {
     id: "vehicles",
     name: "Vehicles",
     icon: "🚗",
-    gradient: colors.gradients.green,
+    gradient: [...colors.gradients.green],
   },
   {
     id: "colors",
     name: "Colors",
     icon: "🎨",
-    gradient: colors.gradients.purple,
+    gradient: [...colors.gradients.purple],
   },
-  { id: "music", name: "Music", icon: "🎵", gradient: colors.gradients.yellow },
-  { id: "home", name: "Home", icon: "🏠", gradient: colors.gradients.teal },
+  { id: "music", name: "Music", icon: "🎵", gradient: [...colors.gradients.yellow] },
+  { id: "home", name: "Home", icon: "🏠", gradient: [...colors.gradients.teal] },
   {
     id: "emotions",
     name: "Emotions",
     icon: "😊",
-    gradient: colors.gradients.pink,
+    gradient: [...colors.gradients.pink],
   },
 ];
 
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: layout.containerPadding,
     paddingBottom: spacing.xl,
   },
   categoriesGrid: {
@@ -227,10 +228,12 @@ const styles = StyleSheet.create({
   },
   categoryButton: {
     width: "48%",
-    marginBottom: spacing.md,
+    marginBottom: layout.buttonSpacing,
   },
   categoryGradient: {
-    height: responsiveHeight(20),
+    height: responsive.buttonHeight(20),
+    minHeight: 120,
+    maxHeight: 160,
     borderRadius: borderRadius["3xl"],
     justifyContent: "center",
     alignItems: "center",

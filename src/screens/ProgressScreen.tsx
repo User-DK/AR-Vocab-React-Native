@@ -19,6 +19,7 @@ import {
   spacing,
   responsive,
   borderRadius,
+  layout,
 } from '../styles/constants';
 
 export default function ProgressScreen({ navigation }: NavigationProps) {
@@ -76,16 +77,16 @@ export default function ProgressScreen({ navigation }: NavigationProps) {
           <Card style={styles.achievementsCard}>
             <Text style={styles.cardTitle}>Achievements</Text>
             <View style={styles.badgeGrid}>
-              <Badge variant="gradient" gradient={colors.gradients.blue}>
+              <Badge variant="gradient" gradient={[...colors.gradients.blue]}>
                 🦁 Animal Master
               </Badge>
-              <Badge variant="gradient" gradient={colors.gradients.green}>
+              <Badge variant="gradient" gradient={[...colors.gradients.green]}>
                 🍎 Fruit Expert
               </Badge>
-              <Badge variant="gradient" gradient={colors.gradients.orange}>
+              <Badge variant="gradient" gradient={[...colors.gradients.orange]}>
                 ⭐ 7-Day Streak
               </Badge>
-              <Badge variant="gradient" gradient={colors.gradients.purple}>
+              <Badge variant="gradient" gradient={[...colors.gradients.purple]}>
                 🎯 Perfect Score
               </Badge>
             </View>
@@ -136,9 +137,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   backButton: {
-    width: responsive.hp('6%'),
-    height: responsive.hp('6%'),
-    borderRadius: responsive.hp('3%'),
+    width: responsive.iconSize(6),
+    height: responsive.iconSize(6),
+    borderRadius: responsive.iconSize(6) / 2,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
@@ -161,15 +162,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: spacing.lg,
+    padding: layout.containerPadding,
     paddingBottom: spacing.xl,
   },
   progressCard: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.cardSpacing,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   achievementsCard: {
-    marginBottom: spacing.lg,
+    marginBottom: layout.cardSpacing,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
   },
   statsCard: {
@@ -187,7 +188,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   progressLabel: {
-    width: '25%',
+    width: '30%',
     fontSize: typography.fontSizes.sm,
     color: colors.mutedForeground,
   },
@@ -201,16 +202,18 @@ const styles = StyleSheet.create({
   badgeGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: layout.cardSpacing,
   },
   statGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   statItem: {
-    width: '50%',
+    width: '48%',
     alignItems: 'center',
     paddingVertical: spacing.md,
+    marginBottom: spacing.sm,
   },
   statNumber: {
     fontSize: typography.fontSizes['2xl'],
