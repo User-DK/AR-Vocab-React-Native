@@ -1,0 +1,267 @@
+{
+  "categories": [
+    {
+      "id": "animals",
+      "name": "Animals",
+      "emoji": "🦁",
+      "color": ["#3b82f6", "#6366f1"],
+      "description": "Learn about different animals",
+      "items": [
+        {
+          "id": "lion",
+          "word": "Lion",
+          "emoji": "🦁",
+          "pronunciation": "/ˈlaɪ.ən/",
+          "phonetic": "LIE-uhn",
+          "modelPath": "assets/ar/models/lion.obj",
+          "soundPath": "assets/ar/sounds/lion.mp3",
+          "textureColor": "#fbbf24",
+          "scale": [0.5, 0.5, 0.5],
+          "position": [0, 0, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "roar", "walk"],
+          "difficulty": "easy",
+          "description": "A large wild cat that lives in Africa"
+        },
+        {
+          "id": "elephant",
+          "word": "Elephant",
+          "emoji": "🐘",
+          "pronunciation": "/ˈel.ɪ.fənt/",
+          "phonetic": "EL-uh-fuhnt",
+          "modelPath": "assets/ar/models/elephant.obj",
+          "soundPath": "assets/ar/sounds/elephant.mp3",
+          "textureColor": "#6b7280",
+          "scale": [0.3, 0.3, 0.3],
+          "position": [0, 0, -1.5],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "trumpet", "walk"],
+          "difficulty": "medium",
+          "description": "A very large animal with a long nose called a trunk"
+        },
+        {
+          "id": "monkey",
+          "word": "Monkey",
+          "emoji": "🐵",
+          "pronunciation": "/ˈmʌŋ.ki/",
+          "phonetic": "MUNG-kee",
+          "modelPath": "assets/ar/models/monkey.obj",
+          "soundPath": "assets/ar/sounds/monkey.mp3",
+          "textureColor": "#8b5a3c",
+          "scale": [0.4, 0.4, 0.4],
+          "position": [0, 0, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "jump", "swing"],
+          "difficulty": "easy",
+          "description": "A furry animal that climbs trees and eats bananas"
+        },
+        {
+          "id": "cat",
+          "word": "Cat",
+          "emoji": "🐱",
+          "pronunciation": "/kæt/",
+          "phonetic": "KAT",
+          "modelPath": "assets/ar/models/cat.obj",
+          "soundPath": "assets/ar/sounds/cat.mp3",
+          "textureColor": "#f59e0b",
+          "scale": [0.6, 0.6, 0.6],
+          "position": [0, -0.2, -0.8],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "meow", "purr"],
+          "difficulty": "easy",
+          "description": "A small furry pet that says meow"
+        },
+        {
+          "id": "dog",
+          "word": "Dog",
+          "emoji": "🐶",
+          "pronunciation": "/dɔːɡ/",
+          "phonetic": "DAWG",
+          "modelPath": "assets/ar/models/dog.obj",
+          "soundPath": "assets/ar/sounds/dog.mp3",
+          "textureColor": "#a855f7",
+          "scale": [0.5, 0.5, 0.5],
+          "position": [0, -0.1, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "bark", "wag"],
+          "difficulty": "easy",
+          "description": "A friendly pet that barks and wags its tail"
+        }
+      ]
+    },
+    {
+      "id": "fruits",
+      "name": "Fruits",
+      "emoji": "🍎",
+      "color": ["#10b981", "#06b6d4"],
+      "description": "Learn about healthy fruits",
+      "items": [
+        {
+          "id": "apple",
+          "word": "Apple",
+          "emoji": "🍎",
+          "pronunciation": "/ˈæp.əl/",
+          "phonetic": "AP-uhl",
+          "modelPath": "assets/ar/models/apple.obj",
+          "soundPath": "assets/ar/sounds/apple.mp3",
+          "textureColor": "#ef4444",
+          "scale": [0.8, 0.8, 0.8],
+          "position": [0, 0, -0.8],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "spin", "shine"],
+          "difficulty": "easy",
+          "description": "A red or green fruit that grows on trees"
+        },
+        {
+          "id": "banana",
+          "word": "Banana",
+          "emoji": "🍌",
+          "pronunciation": "/bəˈnæn.ə/",
+          "phonetic": "buh-NAN-uh",
+          "modelPath": "assets/ar/models/banana.obj",
+          "soundPath": "assets/ar/sounds/banana.mp3",
+          "textureColor": "#fbbf24",
+          "scale": [0.7, 0.7, 0.7],
+          "position": [0, 0, -0.9],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "peel", "bend"],
+          "difficulty": "medium",
+          "description": "A yellow curved fruit that monkeys love"
+        },
+        {
+          "id": "orange",
+          "word": "Orange",
+          "emoji": "🍊",
+          "pronunciation": "/ˈɔːr.ɪndʒ/",
+          "phonetic": "OR-inj",
+          "modelPath": "assets/ar/models/orange.obj",
+          "soundPath": "assets/ar/sounds/orange.mp3",
+          "textureColor": "#f97316",
+          "scale": [0.8, 0.8, 0.8],
+          "position": [0, 0, -0.8],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "bounce", "juice"],
+          "difficulty": "medium",
+          "description": "A round citrus fruit full of vitamin C"
+        }
+      ]
+    },
+    {
+      "id": "colors",
+      "name": "Colors",
+      "emoji": "🌈",
+      "color": ["#8b5cf6", "#ec4899"],
+      "description": "Learn different colors",
+      "items": [
+        {
+          "id": "red",
+          "word": "Red",
+          "emoji": "🔴",
+          "pronunciation": "/red/",
+          "phonetic": "RED",
+          "modelPath": "assets/ar/models/sphere.obj",
+          "soundPath": "assets/ar/sounds/red.mp3",
+          "textureColor": "#ef4444",
+          "scale": [0.6, 0.6, 0.6],
+          "position": [0, 0, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "glow", "pulse"],
+          "difficulty": "easy",
+          "description": "The color of fire and roses"
+        },
+        {
+          "id": "blue",
+          "word": "Blue",
+          "emoji": "🔵",
+          "pronunciation": "/bluː/",
+          "phonetic": "BLOO",
+          "modelPath": "assets/ar/models/sphere.obj",
+          "soundPath": "assets/ar/sounds/blue.mp3",
+          "textureColor": "#3b82f6",
+          "scale": [0.6, 0.6, 0.6],
+          "position": [0, 0, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "glow", "pulse"],
+          "difficulty": "easy",
+          "description": "The color of the sky and ocean"
+        },
+        {
+          "id": "green",
+          "word": "Green",
+          "emoji": "🟢",
+          "pronunciation": "/ɡriːn/",
+          "phonetic": "GREEN",
+          "modelPath": "assets/ar/models/sphere.obj",
+          "soundPath": "assets/ar/sounds/green.mp3",
+          "textureColor": "#10b981",
+          "scale": [0.6, 0.6, 0.6],
+          "position": [0, 0, -1],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "glow", "pulse"],
+          "difficulty": "easy",
+          "description": "The color of grass and leaves"
+        }
+      ]
+    },
+    {
+      "id": "vehicles",
+      "name": "Vehicles",
+      "emoji": "🚗",
+      "color": ["#f59e0b", "#f97316"],
+      "description": "Learn about different vehicles",
+      "items": [
+        {
+          "id": "car",
+          "word": "Car",
+          "emoji": "🚗",
+          "pronunciation": "/kɑːr/",
+          "phonetic": "KAHR",
+          "modelPath": "assets/ar/models/car.obj",
+          "soundPath": "assets/ar/sounds/car.mp3",
+          "textureColor": "#ef4444",
+          "scale": [0.4, 0.4, 0.4],
+          "position": [0, -0.3, -1.2],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "drive", "honk"],
+          "difficulty": "easy",
+          "description": "A vehicle with four wheels that people drive"
+        },
+        {
+          "id": "airplane",
+          "word": "Airplane",
+          "emoji": "✈️",
+          "pronunciation": "/ˈer.pleɪn/",
+          "phonetic": "AIR-playn",
+          "modelPath": "assets/ar/models/airplane.obj",
+          "soundPath": "assets/ar/sounds/airplane.mp3",
+          "textureColor": "#3b82f6",
+          "scale": [0.3, 0.3, 0.3],
+          "position": [0, 0.2, -1.5],
+          "rotation": [0, 0, 0],
+          "animations": ["idle", "fly", "propeller"],
+          "difficulty": "hard",
+          "description": "A flying vehicle that travels through the sky"
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "arSettings": {
+      "planeDetection": true,
+      "lightEstimation": true,
+      "worldAlignment": "gravity",
+      "sessionConfiguration": "worldTracking"
+    },
+    "audioSettings": {
+      "autoPlay": false,
+      "loop": false,
+      "volume": 0.8
+    },
+    "modelSettings": {
+      "defaultScale": [0.5, 0.5, 0.5],
+      "defaultPosition": [0, 0, -1],
+      "autoRotate": false,
+      "shadowEnabled": true
+    }
+  }
+}
