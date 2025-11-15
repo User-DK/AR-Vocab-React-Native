@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Categories: undefined;
   Learning: { category: string };
   Assessment: undefined;
+  SpeechAssessment: { category: string; itemIndex?: number };
   Progress: undefined;
   Settings: undefined;
   Help: undefined;

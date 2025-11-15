@@ -395,11 +395,6 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
                   materials={
                     modelFileType === 'OBJ' ? [item.textureColor] : undefined
                   }
-                  animation={{
-                    name: 'rotate',
-                    run: true,
-                    loop: true,
-                  }}
                   onLoadStart={() => {
                     console.log(
                       `⏳ Starting to load ${modelFileType} model: ${item.word}`,
