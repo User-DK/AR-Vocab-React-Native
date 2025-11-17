@@ -35,7 +35,16 @@ import {
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Default vocabulary data structure for practice
-const defaultVocabularyData: { categories: Array<{ id: string; name: string; emoji: string; color: string[]; description: string; items: VocabularyItem[] }> } = {
+const defaultVocabularyData: {
+  categories: Array<{
+    id: string;
+    name: string;
+    emoji: string;
+    color: string[];
+    description: string;
+    items: VocabularyItem[];
+  }>;
+} = {
   categories: [],
 };
 
@@ -56,10 +65,13 @@ interface AssessmentState {
   assessmentHistory: PronunciationScore[];
 }
 
-export default function SpeechAssessmentScreen({ navigation, route }: SpeechAssessmentScreenProps) {
+export default function SpeechAssessmentScreen({
+  navigation,
+  route,
+}: SpeechAssessmentScreenProps) {
   // Get parameters from navigation (category and starting item)
   const { category = 'animals', itemIndex = 0 } = route.params || {};
-  
+
   // State management
   const [currentIndex, setCurrentIndex] = useState(itemIndex);
   const [vocabularyData, setVocabularyData] = useState(defaultVocabularyData);
@@ -109,14 +121,17 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
 
   // Find current category and items
   const categoryData = vocabularyData.categories.find(
-    (cat) => cat.id && category && cat.id.toLowerCase() === category.toLowerCase(),
+    cat =>
+      cat.id && category && cat.id.toLowerCase() === category.toLowerCase(),
   );
-  
+
   const items = categoryData?.items || [];
   const currentItem = items[currentIndex];
 
   console.log(`🎯 Current practice item: ${currentItem?.word || 'None'}`);
-  console.log(`📂 Category: ${categoryData?.name || 'Unknown'} (${items.length} items)`);
+  console.log(
+    `📂 Category: ${categoryData?.name || 'Unknown'} (${items.length} items)`,
+  );
 
   // Word change animation
   useEffect(() => {
@@ -140,7 +155,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
   useEffect(() => {
     if (assessmentState.isRecording) {
       console.log('🎤 Starting recording animations');
-      
+
       // Pulse animation while recording
       const pulseAnimation = Animated.loop(
         Animated.sequence([
@@ -154,7 +169,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
             duration: 600,
             useNativeDriver: true,
           }),
-        ])
+        ]),
       );
       pulseAnimation.start();
 
@@ -164,7 +179,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
           toValue: 1,
           duration: 3000,
           useNativeDriver: true,
-        })
+        }),
       );
       rotateAnimation.start();
 
@@ -183,7 +198,11 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
    * Start pronunciation assessment for current word
    */
   const startPronunciationAssessment = async () => {
-    if (!currentItem || assessmentState.isRecording || assessmentState.isProcessing) {
+    if (
+      !currentItem ||
+      assessmentState.isRecording ||
+      assessmentState.isProcessing
+    ) {
       return;
     }
 
@@ -202,7 +221,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
       // Start speech assessment with MFCC analysis
       const success = await speechAssessmentEngine.startAssessment(
         currentItem.word,
-        currentItem.phonetic
+        currentItem.phonetic,
       );
 
       if (!success) {
@@ -215,14 +234,13 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
           await stopPronunciationAssessment();
         }
       }, 3000); // 3 seconds recording
-
     } catch (error) {
       console.error('❌ Assessment start failed:', error);
       Alert.alert(
         'Recording Error',
-        'Could not start pronunciation assessment. Please check microphone permissions and try again.'
+        'Could not start pronunciation assessment. Please check microphone permissions and try again.',
       );
-      
+
       setAssessmentState(prev => ({
         ...prev,
         isRecording: false,
@@ -250,7 +268,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
 
       if (score) {
         console.log('📊 Pronunciation score received:', score);
-        
+
         // Add to assessment history
         setAssessmentState(prev => ({
           ...prev,
@@ -262,7 +280,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
 
         // Animate feedback display
         animateFeedbackDisplay(score);
-        
+
         // Auto-hide feedback after delay
         setTimeout(() => {
           setAssessmentState(prev => ({
@@ -270,18 +288,16 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
             showFeedback: false,
           }));
         }, 4000);
-
       } else {
         throw new Error('No pronunciation score received');
       }
-
     } catch (error) {
       console.error('❌ Assessment processing failed:', error);
       Alert.alert(
         'Assessment Error',
-        'Could not process your pronunciation. Please try again.'
+        'Could not process your pronunciation. Please try again.',
       );
-      
+
       setAssessmentState(prev => ({
         ...prev,
         isRecording: false,
@@ -350,7 +366,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
         [
           { text: 'Practice Again', onPress: () => setCurrentIndex(0) },
           { text: 'Back to Home', onPress: () => navigation.navigate('Home') },
-        ]
+        ],
       );
     }
 
@@ -401,7 +417,9 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
             <Icon name="alert-circle" size={64} color="#ef4444" />
             <Text style={styles.errorText}>No Practice Items Available</Text>
             <Text style={styles.errorSubtext}>
-              {category ? `No items found in "${category}" category.` : 'Please select a category first.'}
+              {category
+                ? `No items found in "${category}" category.`
+                : 'Please select a category first.'}
             </Text>
             <TouchableOpacity
               style={styles.errorButton}
@@ -437,12 +455,12 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
           >
             <Icon name="arrow-back" size={24} color="white" />
           </TouchableOpacity>
-          
+
           <View style={styles.speechTestIndicator}>
             <Icon name="mic" size={20} color="white" />
             <Text style={styles.speechTestText}>Pronunciation Practice</Text>
           </View>
-          
+
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.navigate('Home')}
@@ -470,12 +488,19 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                 scale: currentItem.scale as [number, number, number],
                 position: currentItem.position as [number, number, number],
                 rotation: currentItem.rotation as [number, number, number],
-                difficulty: currentItem.difficulty as 'easy' | 'medium' | 'hard',
+                difficulty: currentItem.difficulty as
+                  | 'easy'
+                  | 'medium'
+                  | 'hard',
               }}
-              onModelLoaded={() => console.log('AR Model loaded for practice:', currentItem.word)}
-              onModelTapped={() => console.log('AR Model tapped:', currentItem.word)}
+              onModelLoaded={() =>
+                console.log('AR Model loaded for practice:', currentItem.word)
+              }
+              onModelTapped={() =>
+                console.log('AR Model tapped:', currentItem.word)
+              }
             />
-            
+
             {/* AR Practice Indicators */}
             <View style={styles.arIndicators}>
               <View style={[styles.arMarker, styles.topLeft]} />
@@ -509,7 +534,9 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
               assessmentState.isProcessing && styles.recordButtonProcessing,
             ]}
             onPress={startPronunciationAssessment}
-            disabled={assessmentState.isRecording || assessmentState.isProcessing}
+            disabled={
+              assessmentState.isRecording || assessmentState.isProcessing
+            }
           >
             <LinearGradient
               colors={
@@ -525,7 +552,7 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                 <ActivityIndicator size="large" color="white" />
               ) : (
                 <Icon
-                  name={assessmentState.isRecording ? "stop" : "mic"}
+                  name={assessmentState.isRecording ? 'stop' : 'mic'}
                   size={48}
                   color="white"
                 />
@@ -553,7 +580,9 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
               <TouchableOpacity
                 style={styles.navButton}
                 onPress={handlePreviousWord}
-                disabled={assessmentState.isRecording || assessmentState.isProcessing}
+                disabled={
+                  assessmentState.isRecording || assessmentState.isProcessing
+                }
               >
                 <LinearGradient
                   colors={['#6b7280', '#4b5563']}
@@ -566,7 +595,9 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
               <TouchableOpacity
                 style={styles.nextButton}
                 onPress={handleNextWord}
-                disabled={assessmentState.isRecording || assessmentState.isProcessing}
+                disabled={
+                  assessmentState.isRecording || assessmentState.isProcessing
+                }
               >
                 <LinearGradient
                   colors={['#3b82f6', '#6366f1']}
@@ -629,7 +660,10 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
             <LinearGradient
               colors={
                 assessmentState.currentScore
-                  ? [getFeedbackColor(assessmentState.currentScore.feedback), '#ffffff']
+                  ? [
+                      getFeedbackColor(assessmentState.currentScore.feedback),
+                      '#ffffff',
+                    ]
                   : ['#6b7280', '#ffffff']
               }
               style={styles.feedbackGradient}
@@ -638,16 +672,24 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                 <>
                   {/* Feedback Icon */}
                   <Text style={styles.feedbackEmoji}>
-                    {assessmentState.currentScore.feedback === 'excellent' && '🌟'}
+                    {assessmentState.currentScore.feedback === 'excellent' &&
+                      '🌟'}
                     {assessmentState.currentScore.feedback === 'good' && '👍'}
-                    {assessmentState.currentScore.feedback === 'acceptable' && '👌'}
+                    {assessmentState.currentScore.feedback === 'acceptable' &&
+                      '👌'}
                     {assessmentState.currentScore.feedback === 'poor' && '📚'}
-                    {assessmentState.currentScore.feedback === 'unclear' && '🎤'}
+                    {assessmentState.currentScore.feedback === 'unclear' &&
+                      '🎤'}
                   </Text>
 
                   {/* Score Display */}
                   <Text style={styles.feedbackTitle}>
-                    {getFeedbackMessage(assessmentState.currentScore).split('!')[0]}!
+                    {
+                      getFeedbackMessage(assessmentState.currentScore).split(
+                        '!',
+                      )[0]
+                    }
+                    !
                   </Text>
 
                   {/* Detailed Score Breakdown */}
@@ -661,16 +703,24 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                             {
                               width: scoreBarAnim.interpolate({
                                 inputRange: [0, 1],
-                                outputRange: ['0%', `${assessmentState.currentScore.overall * 100}%`],
+                                outputRange: [
+                                  '0%',
+                                  `${
+                                    assessmentState.currentScore.overall * 100
+                                  }%`,
+                                ],
                                 extrapolate: 'clamp',
                               }),
-                              backgroundColor: getFeedbackColor(assessmentState.currentScore.feedback),
+                              backgroundColor: getFeedbackColor(
+                                assessmentState.currentScore.feedback,
+                              ),
                             },
                           ]}
                         />
                       </Animated.View>
                       <Text style={styles.scoreValue}>
-                        {Math.round(assessmentState.currentScore.overall * 100)}%
+                        {Math.round(assessmentState.currentScore.overall * 100)}
+                        %
                       </Text>
                     </View>
 
@@ -681,14 +731,19 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                           style={[
                             styles.scoreBar,
                             {
-                              width: `${assessmentState.currentScore.accuracy * 100}%`,
+                              width: `${
+                                assessmentState.currentScore.accuracy * 100
+                              }%`,
                               backgroundColor: '#3b82f6',
                             },
                           ]}
                         />
                       </View>
                       <Text style={styles.scoreValue}>
-                        {Math.round(assessmentState.currentScore.accuracy * 100)}%
+                        {Math.round(
+                          assessmentState.currentScore.accuracy * 100,
+                        )}
+                        %
                       </Text>
                     </View>
 
@@ -699,14 +754,17 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                           style={[
                             styles.scoreBar,
                             {
-                              width: `${assessmentState.currentScore.fluency * 100}%`,
+                              width: `${
+                                assessmentState.currentScore.fluency * 100
+                              }%`,
                               backgroundColor: '#10b981',
                             },
                           ]}
                         />
                       </View>
                       <Text style={styles.scoreValue}>
-                        {Math.round(assessmentState.currentScore.fluency * 100)}%
+                        {Math.round(assessmentState.currentScore.fluency * 100)}
+                        %
                       </Text>
                     </View>
                   </View>
@@ -715,7 +773,10 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                   <View style={styles.recognitionDetails}>
                     <Text style={styles.recognitionLabel}>You said:</Text>
                     <Text style={styles.recognitionText}>
-                      "{assessmentState.currentScore.details.recognizedText || 'Unable to recognize'}"
+                      "
+                      {assessmentState.currentScore.details.recognizedText ||
+                        'Unable to recognize'}
+                      "
                     </Text>
                     <Text style={styles.targetLabel}>Target:</Text>
                     <Text style={styles.targetText}>
@@ -724,7 +785,8 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                   </View>
 
                   {/* Star Animation for Good Scores */}
-                  {assessmentState.currentScore.overall >= SCORE_THRESHOLDS.good && (
+                  {assessmentState.currentScore.overall >=
+                    SCORE_THRESHOLDS.good && (
                     <View style={styles.starsContainer}>
                       {starAnimations.map((anim, index) => (
                         <Animated.Text
@@ -745,7 +807,12 @@ export default function SpeechAssessmentScreen({ navigation, route }: SpeechAsse
                   {/* Close Button */}
                   <TouchableOpacity
                     style={styles.closeButton}
-                    onPress={() => setAssessmentState(prev => ({ ...prev, showFeedback: false }))}
+                    onPress={() =>
+                      setAssessmentState(prev => ({
+                        ...prev,
+                        showFeedback: false,
+                      }))
+                    }
                   >
                     <Text style={styles.closeButtonText}>Continue</Text>
                   </TouchableOpacity>
