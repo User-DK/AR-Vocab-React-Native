@@ -254,21 +254,28 @@ export default function ARLearningScreen({
        * The assetLoader utility maps JSON string paths to proper require() calls.
        */
 
-      // Get the sound asset path for Android assets
-      const soundAsset = getSoundAsset(currentItem.soundPath);
-
-      if (!soundAsset) {
+      // Check if sound path exists
+      if (!currentItem.soundPath) {
         console.warn(
-          `⚠️ Sound file not found: ${currentItem.soundPath}`,
+          `⚠️ No sound path for: ${currentItem.word}`,
         );
         setIsPlaying(false);
         return;
       }
 
-      console.log('✅ Loading sound from Android assets:', soundAsset);
+      // For Android, react-native-sound needs the full path relative to assets root
+      // vocabulary-data.json has: "sounds/lion.mp3"
+      // Files are in: android/app/src/main/assets/ar/sounds/lion.mp3
+      // We need: "ar/sounds/lion.mp3" (full path from assets root)
+      const cleanPath = currentItem.soundPath.replace(/^sounds\//, '');
+      const fullPath = `ar/sounds/${cleanPath}`;
+      
+      console.log('✅ Loading sound:', fullPath);
+      console.log('   Original path:', currentItem.soundPath);
+      console.log('   File location: android/app/src/main/assets/' + fullPath);
 
-      // Load sound from Android assets (not bundled, uses Sound.MAIN_BUNDLE)
-      const soundFile = new Sound(soundAsset, Sound.MAIN_BUNDLE, error => {
+      // Load sound from Android assets - using full path from assets root
+      const soundFile = new Sound(fullPath, Sound.MAIN_BUNDLE, error => {
         if (error) {
           console.error('❌ Failed to load sound:', error);
           Alert.alert(

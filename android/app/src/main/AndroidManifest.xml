@@ -3,6 +3,10 @@
 
     <queries>
         <package android:name="com.google.ar.core" />
+        <package android:name="com.google.android.googlequicksearchbox" />
+        <intent>
+            <action android:name="android.speech.RecognitionService" />
+        </intent>
     </queries>
 
 

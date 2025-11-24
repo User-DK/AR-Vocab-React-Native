@@ -85,6 +85,12 @@ android {
         versionCode 1
         versionName "1.0"
     }
+    
+    // Prevent compression of MP3 files so they can be played from assets
+    aaptOptions {
+        noCompress "mp3"
+    }
+
     signingConfigs {
         debug {
             storeFile file('debug.keystore')

@@ -219,14 +219,10 @@ export default function SpeechAssessmentScreen({
       }));
 
       // Start speech assessment with MFCC analysis
-      const success = await speechAssessmentEngine.startAssessment(
+      await speechAssessmentEngine.startAssessment(
         currentItem.word,
         currentItem.phonetic,
       );
-
-      if (!success) {
-        throw new Error('Failed to start speech assessment');
-      }
 
       // Auto-stop after recording duration
       setTimeout(async () => {
@@ -234,11 +230,11 @@ export default function SpeechAssessmentScreen({
           await stopPronunciationAssessment();
         }
       }, 3000); // 3 seconds recording
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Assessment start failed:', error);
       Alert.alert(
         'Recording Error',
-        'Could not start pronunciation assessment. Please check microphone permissions and try again.',
+        error.message || 'Could not start pronunciation assessment. Please check microphone permissions and try again.',
       );
 
       setAssessmentState(prev => ({

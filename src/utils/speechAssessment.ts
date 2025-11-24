@@ -141,7 +141,7 @@ export class SpeechAssessmentEngine {
       if (!available) {
         console.error('❌ Voice recognition not available on this device');
         this.isRecording = false;
-        return false;
+        throw new Error('Voice recognition service is not available on this device. Please ensure Google App is installed and enabled.');
       }
 
       // Request permissions on Android
@@ -159,7 +159,7 @@ export class SpeechAssessmentEngine {
         if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
           console.error('❌ Microphone permission denied');
           this.isRecording = false;
-          return false;
+          throw new Error('Microphone permission was denied. Please enable it in settings.');
         }
       }
 
@@ -178,7 +178,7 @@ export class SpeechAssessmentEngine {
     } catch (error) {
       console.error('❌ Assessment start failed:', error);
       this.isRecording = false;
-      return false;
+      throw error;
     }
   }
 
