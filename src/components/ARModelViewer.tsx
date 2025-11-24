@@ -141,32 +141,22 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
         <View style={styles.trackingOverlay}>
           <ActivityIndicator size="small" color="#ffffff" />
           <Text style={styles.trackingText}>
-            Move your device to detect surfaces...
-          </Text>
-        </View>
-      )}
-
-      {/* Model Placed Indicator */}
-      {trackingInitialized && !modelPlaced && (
-        <View style={styles.trackingOverlay}>
-          <Icon name="hand-left-outline" size={24} color="#ffffff" />
-          <Text style={styles.trackingText}>
-            Tap any flat surface to place model
+            Loading AR model...
           </Text>
         </View>
       )}
 
       {/* AR Instructions */}
-      <View style={styles.instructionsOverlay}>
-        <View style={styles.instructionBadge}>
-          <Icon name="scan" size={20} color="#ffffff" />
-          <Text style={styles.instructionText}>
-            {!trackingInitialized
-              ? 'Move device to detect surfaces...'
-              : 'Tap surface to place ' + item.word}
-          </Text>
+      {modelPlaced && (
+        <View style={styles.instructionsOverlay}>
+          <View style={styles.instructionBadge}>
+            <Icon name="cube-outline" size={20} color="#ffffff" />
+            <Text style={styles.instructionText}>
+              Viewing {item.word} in AR
+            </Text>
+          </View>
         </View>
-      </View>
+      )}
     </View>
   );
 };
@@ -189,21 +179,22 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
   onTrackingInitialized,
   onModelPlaced,
 }) => {
-  const [modelPlaced, setModelPlaced] = useState(false);
-  const [modelPosition, setModelPosition] = useState([0, 0, -1]);
+  const [modelPlaced, setModelPlaced] = useState(true); // Auto-place model
+  const [modelPosition, setModelPosition] = useState([0, -0.5, -1.5]); // Fixed position in front of camera
   const [modelLoadError, setModelLoadError] = useState(false);
 
   // Get model type using utility function
   const modelFileType = getModelType(item.modelPath);
 
-  // Reset model placement when item changes
+  // Auto-place model and notify tracking when item changes
   useEffect(() => {
-    console.log('🔄 Item changed, resetting AR scene for:', item.word);
-    setModelPlaced(false);
-    setModelPosition([0, 0, -1]);
+    console.log('🔄 Item changed, auto-placing AR model for:', item.word);
+    setModelPlaced(true);
+    setModelPosition([0, -0.5, -1.5]); // Position in front of camera
     setModelLoadError(false);
-    onModelPlaced(false);
-  }, [item.id, item.word, onModelPlaced]);
+    onModelPlaced(true);
+    onTrackingInitialized(); // Immediately mark as initialized
+  }, [item.id, item.word, onModelPlaced, onTrackingInitialized]);
 
   const handleModelLoad = useCallback(() => {
     console.log(
@@ -379,67 +370,62 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
         intensity={700}
       />
 
-      {/* AR Plane Selector - Detects horizontal surfaces */}
-      <ViroARPlaneSelector
-        minHeight={0.1}
-        minWidth={0.1}
-        onPlaneSelected={handlePlaneClick}
-      >
-        {modelPlaced && (
-          <ViroNode
-            position={[0, 0, 0]}
-            dragType="FixedToWorld"
-            onDrag={() => {}}
-          >
-            {!modelLoadError ? (
-              <>
-                {/* Load 3D Model - Supports GLB, GLTF, and OBJ */}
-                <Viro3DObject
-                  source={getModelSource()}
-                  resources={getResourcesForOBJ()}
-                  position={item.position as [number, number, number]}
-                  scale={item.scale}
-                  rotation={item.rotation}
-                  type={modelFileType}
-                  materials={
-                    modelFileType === 'OBJ' ? [item.textureColor] : undefined
-                  }
-                  onLoadStart={() => {
-                    console.log(
-                      `⏳ Starting to load ${modelFileType} model: ${item.word}`,
-                    );
-                  }}
-                  onLoadEnd={handleModelLoad}
-                  onError={handleModelError}
-                  onClick={handleModelTap}
-                  lightReceivingBitMask={1}
-                  shadowCastingBitMask={1}
-                />
-              </>
-            ) : (
-              // Fallback: Show emoji if model fails to load
-              <ViroNode position={item.position as [number, number, number]}>
-                <ViroBox
-                  position={[0, 0, 0]}
-                  scale={[0.3, 0.3, 0.3]}
-                  materials={['fallbackMaterial']}
-                  onClick={handleModelTap}
-                />
-              </ViroNode>
-            )}
-
-            {/* Shadow plane underneath model */}
-            <ViroNode position={[0, -0.01, 0]}>
+      {/* Direct model placement without plane detection */}
+      {modelPlaced && (
+        <ViroNode
+          position={modelPosition as [number, number, number]}
+          dragType="FixedToWorld"
+          onDrag={() => {}}
+        >
+          {!modelLoadError ? (
+            <>
+              {/* Load 3D Model - Supports GLB, GLTF, and OBJ */}
+              <Viro3DObject
+                source={getModelSource()}
+                resources={getResourcesForOBJ()}
+                position={[0, 0, 0]}
+                scale={item.scale}
+                rotation={item.rotation}
+                type={modelFileType}
+                materials={
+                  modelFileType === 'OBJ' ? [item.textureColor] : undefined
+                }
+                onLoadStart={() => {
+                  console.log(
+                    `⏳ Starting to load ${modelFileType} model: ${item.word}`,
+                  );
+                }}
+                onLoadEnd={handleModelLoad}
+                onError={handleModelError}
+                onClick={handleModelTap}
+                lightReceivingBitMask={1}
+                shadowCastingBitMask={1}
+                animation={{name: 'rotate', run: true, loop: true}}
+              />
+            </>
+          ) : (
+            // Fallback: Show emoji if model fails to load
+            <ViroNode position={[0, 0, 0]}>
               <ViroBox
-                position={[0, -0.5, 0]}
-                scale={[2, 0.01, 2]}
-                materials={['shadowMaterial']}
-                opacity={0.3}
+                position={[0, 0, 0]}
+                scale={[0.3, 0.3, 0.3]}
+                materials={['fallbackMaterial']}
+                onClick={handleModelTap}
               />
             </ViroNode>
+          )}
+
+          {/* Shadow plane underneath model */}
+          <ViroNode position={[0, -0.5, 0]}>
+            <ViroBox
+              position={[0, 0, 0]}
+              scale={[1.5, 0.01, 1.5]}
+              materials={['shadowMaterial']}
+              opacity={0.3}
+            />
           </ViroNode>
-        )}
-      </ViroARPlaneSelector>
+        </ViroNode>
+      )}
     </ViroARScene>
   );
 };

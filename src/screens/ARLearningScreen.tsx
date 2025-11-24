@@ -254,25 +254,21 @@ export default function ARLearningScreen({
        * The assetLoader utility maps JSON string paths to proper require() calls.
        */
 
-      // Get the proper require() reference for this sound path
+      // Get the sound asset path for Android assets
       const soundAsset = getSoundAsset(currentItem.soundPath);
 
       if (!soundAsset) {
         console.warn(
-          `⚠️ Sound file not found in asset mapping: ${currentItem.soundPath}`,
-        );
-        Alert.alert(
-          'Audio Not Available',
-          `Sound file for "${currentItem.word}" is not yet added.\n\nTo add sounds:\n1. Place MP3 files in assets/ar/sounds/\n2. Add them to SOUND_ASSETS in src/utils/assetLoader.ts\n3. Rebuild the app`,
+          `⚠️ Sound file not found: ${currentItem.soundPath}`,
         );
         setIsPlaying(false);
         return;
       }
 
-      console.log('✅ Sound asset loaded via require()');
+      console.log('✅ Loading sound from Android assets:', soundAsset);
 
-      // Load sound using the require() reference
-      const soundFile = new Sound(soundAsset, error => {
+      // Load sound from Android assets (not bundled, uses Sound.MAIN_BUNDLE)
+      const soundFile = new Sound(soundAsset, Sound.MAIN_BUNDLE, error => {
         if (error) {
           console.error('❌ Failed to load sound:', error);
           Alert.alert(
