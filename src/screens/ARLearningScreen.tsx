@@ -440,6 +440,7 @@ export default function ARLearningScreen({
       <View style={styles.arContainer}>
         <View style={styles.arViewerContainer}>
           <ARModelViewer
+            key={currentItem.id} // Force remount when item changes
             item={{
               ...currentItem,
               scale: currentItem.scale as [number, number, number],

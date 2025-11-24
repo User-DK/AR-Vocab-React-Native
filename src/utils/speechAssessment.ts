@@ -88,6 +88,14 @@ export class SpeechAssessmentEngine {
    */
   private async initializeVoice() {
     try {
+      if (!Voice) {
+        console.error('❌ Voice module not available');
+        return;
+      }
+
+      // Remove any existing listeners first
+      Voice.removeAllListeners();
+      
       Voice.onSpeechResults = this.handleSpeechResults.bind(this);
       Voice.onSpeechError = this.handleSpeechError.bind(this);
       Voice.onSpeechEnd = this.handleSpeechEnd.bind(this);
@@ -115,15 +123,48 @@ export class SpeechAssessmentEngine {
    */
   async startAssessment(targetWord: string, targetPhonetic: string): Promise<boolean> {
     try {
+      if (!Voice) {
+        console.error('❌ Voice module not available');
+        return false;
+      }
+
       this.targetWord = targetWord.toLowerCase().trim();
       this.targetPhonetic = targetPhonetic;
+      this.recognizedText = ''; // Reset recognized text
       this.isRecording = true;
 
       console.log(`🎯 Starting assessment for: "${this.targetWord}"`);
       console.log(`🔤 Target phonetic: "${this.targetPhonetic}"`);
 
-      // Start voice recognition (simplified mode without audio recording)
-      await Voice.start(Platform.OS === 'ios' ? 'en-US' : 'en-US');
+      // Check if voice is available
+      const available = await Voice.isAvailable();
+      if (!available) {
+        console.error('❌ Voice recognition not available on this device');
+        this.isRecording = false;
+        return false;
+      }
+
+      // Request permissions on Android
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          {
+            title: 'Microphone Permission',
+            message: 'This app needs access to your microphone for pronunciation practice.',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.error('❌ Microphone permission denied');
+          this.isRecording = false;
+          return false;
+        }
+      }
+
+      // Start voice recognition
+      await Voice.start('en-US');
       console.log('🎤 Voice recognition started');
 
       // Auto-stop after max duration
@@ -154,8 +195,13 @@ export class SpeechAssessmentEngine {
       console.log('⏹️ Stopping assessment...');
 
       // Stop voice recognition
-      await Voice.stop();
-      await Voice.destroy();
+      if (Voice) {
+        try {
+          await Voice.stop();
+        } catch (err) {
+          console.warn('Voice.stop() failed:', err);
+        }
+      }
 
       // Process the speech recognition results (simplified without audio file)
       return await this.processRecognitionResults();
@@ -515,7 +561,10 @@ export class SpeechAssessmentEngine {
    */
   async cleanup() {
     try {
-      await Voice.destroy();
+      if (Voice) {
+        await Voice.destroy();
+        Voice.removeAllListeners();
+      }
       console.log('🧹 Speech assessment cleanup completed');
     } catch (error) {
       console.error('❌ Cleanup failed:', error);

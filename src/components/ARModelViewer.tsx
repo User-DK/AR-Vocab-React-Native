@@ -196,6 +196,15 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
   // Get model type using utility function
   const modelFileType = getModelType(item.modelPath);
 
+  // Reset model placement when item changes
+  useEffect(() => {
+    console.log('🔄 Item changed, resetting AR scene for:', item.word);
+    setModelPlaced(false);
+    setModelPosition([0, 0, -1]);
+    setModelLoadError(false);
+    onModelPlaced(false);
+  }, [item.id, item.word, onModelPlaced]);
+
   const handleModelLoad = useCallback(() => {
     console.log(
       `✅ Successfully loaded ${modelFileType} model: ${item.modelPath}`,
