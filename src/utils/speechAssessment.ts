@@ -123,9 +123,10 @@ export class SpeechAssessmentEngine {
    */
   async startAssessment(targetWord: string, targetPhonetic: string): Promise<boolean> {
     try {
+      // Check if Voice module exists
       if (!Voice) {
         console.error('❌ Voice module not available');
-        return false;
+        throw new Error('Voice recognition module is not available. Please reinstall the app.');
       }
 
       this.targetWord = targetWord.toLowerCase().trim();
@@ -136,12 +137,19 @@ export class SpeechAssessmentEngine {
       console.log(`🎯 Starting assessment for: "${this.targetWord}"`);
       console.log(`🔤 Target phonetic: "${this.targetPhonetic}"`);
 
-      // Check if voice is available
-      const available = await Voice.isAvailable();
+      // Check if voice is available - wrap in try-catch for null safety
+      let available: boolean = false;
+      try {
+        const isAvailable = await Voice.isAvailable();
+        available = Boolean(isAvailable);
+      } catch (voiceError) {
+        console.error('❌ Voice.isAvailable() failed:', voiceError);
+        available = false;
+      }
       if (!available) {
         console.error('❌ Voice recognition not available on this device');
         this.isRecording = false;
-        throw new Error('Voice recognition service is not available on this device. Please ensure Google App is installed and enabled.');
+        throw new Error('Voice recognition is not available. Please ensure:\n1. Google App is installed\n2. Speech recognition is enabled\n3. Microphone permissions are granted');
       }
 
       // Request permissions on Android
@@ -163,9 +171,15 @@ export class SpeechAssessmentEngine {
         }
       }
 
-      // Start voice recognition
-      await Voice.start('en-US');
-      console.log('🎤 Voice recognition started');
+      // Start voice recognition with error handling
+      try {
+        await Voice.start('en-US');
+        console.log('🎤 Voice recognition started');
+      } catch (startError: any) {
+        console.error('❌ Voice.start() failed:', startError);
+        this.isRecording = false;
+        throw new Error(startError?.message || 'Failed to start voice recognition. Please try again.');
+      }
 
       // Auto-stop after max duration
       setTimeout(() => {

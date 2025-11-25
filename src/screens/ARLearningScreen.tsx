@@ -263,19 +263,23 @@ export default function ARLearningScreen({
         return;
       }
 
-      // For Android, react-native-sound needs the full path relative to assets root
-      // vocabulary-data.json has: "sounds/lion.mp3"
-      // Files are in: android/app/src/main/assets/ar/sounds/lion.mp3
-      // We need: "ar/sounds/lion.mp3" (full path from assets root)
-      const cleanPath = currentItem.soundPath.replace(/^sounds\//, '');
-      const fullPath = `ar/sounds/${cleanPath}`;
+      // For Android, react-native-sound loads from res/raw folder
+      // Files need to be lowercase with underscores only, no extension needed
+      // vocabulary-data.json has: "sounds/Lion.mp3" or "sounds/lion.mp3"
+      // Convert to raw resource name: "lion" (lowercase, no extension)
+      let rawName = currentItem.soundPath
+        .replace(/^sounds\//, '')  // Remove "sounds/" prefix
+        .replace(/\.mp3$/i, '')    // Remove .mp3 extension
+        .toLowerCase()             // Convert to lowercase
+        .replace(/-/g, '_')        // Replace hyphens with underscores
+        .replace(/\s+/g, '_');     // Replace spaces with underscores
       
-      console.log('✅ Loading sound:', fullPath);
+      console.log('✅ Loading sound from raw:', rawName);
       console.log('   Original path:', currentItem.soundPath);
-      console.log('   File location: android/app/src/main/assets/' + fullPath);
 
-      // Load sound from Android assets - using full path from assets root
-      const soundFile = new Sound(fullPath, Sound.MAIN_BUNDLE, error => {
+      // On Android, pass empty string as basePath to load from res/raw
+      // The file should be at: android/app/src/main/res/raw/{rawName}.mp3
+      const soundFile = new Sound(rawName + '.mp3', Sound.MAIN_BUNDLE, error => {
         if (error) {
           console.error('❌ Failed to load sound:', error);
           Alert.alert(
