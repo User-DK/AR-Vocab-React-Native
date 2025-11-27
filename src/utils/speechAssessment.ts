@@ -8,7 +8,7 @@
  * - Real-time feedback generation
  */
 
-import { Platform, PermissionsAndroid } from 'react-native';
+import { Platform, PermissionsAndroid, Linking } from 'react-native';
 import Voice from '@react-native-voice/voice';
 
 // Audio configuration for high-quality recording
@@ -146,10 +146,56 @@ export class SpeechAssessmentEngine {
         console.error('❌ Voice.isAvailable() failed:', voiceError);
         available = false;
       }
+
+      // Ensure microphone permission on Android (check first, then request)
+      if (Platform.OS === 'android') {
+        try {
+          const already = await PermissionsAndroid.check(
+            PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+          );
+          if (!already) {
+            const granted = await PermissionsAndroid.request(
+              PermissionsAndroid.PERMISSIONS.RECORD_AUDIO,
+              {
+                title: 'Microphone Permission',
+                message:
+                  'This app needs access to your microphone for pronunciation practice.',
+                buttonNeutral: 'Ask Me Later',
+                buttonNegative: 'Cancel',
+                buttonPositive: 'OK',
+              },
+            );
+            if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+              console.error('❌ Microphone permission denied');
+              this.isRecording = false;
+              throw new Error('Microphone permission was denied. Please enable it in settings.');
+            }
+          }
+        } catch (permErr) {
+          console.warn('⚠️ Permission check/request failed:', permErr);
+        }
+      }
+
+      // If Voice reports unavailable, still attempt to start recognition — some devices
+      // may return false from isAvailable() but still allow start(). This improves
+      // behavior across OEMs and installs.
       if (!available) {
-        console.error('❌ Voice recognition not available on this device');
-        this.isRecording = false;
-        throw new Error('Voice recognition is not available. Please ensure:\n1. Google App is installed\n2. Speech recognition is enabled\n3. Microphone permissions are granted');
+        console.warn('⚠️ Voice.isAvailable() returned false — attempting Voice.start() as fallback');
+        try {
+          await Voice.start('en-US');
+          console.log('🎤 Voice.start() succeeded despite isAvailable=false');
+          // mark available so subsequent code doesn't try to start again
+          available = true;
+        } catch (startErr) {
+          console.error('❌ Voice.start() failed (fallback):', startErr);
+          this.isRecording = false;
+          const e = new Error(
+            'Voice recognition is not available. Please ensure:\n1. Google App (or a speech recognition provider) is installed\n2. Speech recognition is enabled in system settings\n3. Microphone permissions are granted',
+          );
+          // attach a hint code so UI can show an actionable button if desired
+          (e as any).code = 'VOICE_UNAVAILABLE';
+          throw e;
+        }
       }
 
       // Request permissions on Android

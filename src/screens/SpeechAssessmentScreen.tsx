@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Modal,
   Alert,
   ActivityIndicator,
+  Platform,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -30,6 +32,7 @@ import {
   responsive,
   borderRadius,
   shadows,
+  layout,
 } from '../styles/constants';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -85,10 +88,10 @@ export default function SpeechAssessmentScreen({
 
   // Animation values for interactive UI
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const rotateAnim = useRef(new Animated.Value(0)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const feedbackScaleAnim = useRef(new Animated.Value(0)).current;
   const scoreBarAnim = useRef(new Animated.Value(0)).current;
+  const gridOpacity = useRef(new Animated.Value(0.3)).current;
   const starAnimations = [
     useRef(new Animated.Value(0)).current,
     useRef(new Animated.Value(0)).current,
@@ -98,11 +101,31 @@ export default function SpeechAssessmentScreen({
   // Load vocabulary data on component mount
   useEffect(() => {
     loadVocabularyData();
+    startBackgroundAnimations();
     return () => {
       // Cleanup speech assessment engine
       speechAssessmentEngine.cleanup();
     };
   }, []);
+
+  // Start background animations (like ARLearningScreen)
+  const startBackgroundAnimations = () => {
+    // Grid pulsing animation
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(gridOpacity, {
+          toValue: 0.6,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(gridOpacity, {
+          toValue: 0.3,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  };
 
   // Load vocabulary data from bundled asset
   const loadVocabularyData = async () => {
@@ -160,7 +183,7 @@ export default function SpeechAssessmentScreen({
       const pulseAnimation = Animated.loop(
         Animated.sequence([
           Animated.timing(pulseAnim, {
-            toValue: 1.2,
+            toValue: 1.3,
             duration: 600,
             useNativeDriver: true,
           }),
@@ -173,23 +196,11 @@ export default function SpeechAssessmentScreen({
       );
       pulseAnimation.start();
 
-      // Rotate AR model while recording for engagement
-      const rotateAnimation = Animated.loop(
-        Animated.timing(rotateAnim, {
-          toValue: 1,
-          duration: 3000,
-          useNativeDriver: true,
-        }),
-      );
-      rotateAnimation.start();
-
       return () => {
         pulseAnimation.stop();
-        rotateAnimation.stop();
       };
     } else {
       // Reset animations when not recording
-      rotateAnim.setValue(0);
       pulseAnim.setValue(1);
     }
   }, [assessmentState.isRecording]);
@@ -232,10 +243,32 @@ export default function SpeechAssessmentScreen({
       }, 3000); // 3 seconds recording
     } catch (error: any) {
       console.error('❌ Assessment start failed:', error);
-      Alert.alert(
-        'Recording Error',
-        error.message || 'Could not start pronunciation assessment. Please check microphone permissions and try again.',
-      );
+
+      // If voice is unavailable, offer to open app settings
+      if (error?.code === 'VOICE_UNAVAILABLE') {
+        Alert.alert(
+          'Recording Error',
+          error.message ||
+            'Voice recognition is not available on this device. You can open app settings to check permissions or install a speech recognition provider.',
+          [
+            {
+              text: 'Open Settings',
+              onPress: () => {
+                Linking.openSettings().catch(() => {
+                  console.warn('Unable to open settings');
+                });
+              },
+            },
+            { text: 'OK' },
+          ],
+        );
+      } else {
+        Alert.alert(
+          'Recording Error',
+          error.message ||
+            'Could not start pronunciation assessment. Please check microphone permissions and try again.',
+        );
+      }
 
       setAssessmentState(prev => ({
         ...prev,
@@ -392,64 +425,108 @@ export default function SpeechAssessmentScreen({
     }));
   };
 
-  // Rotation interpolation for AR model
-  const rotateInterpolate = rotateAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
-
   // Show error state if no vocabulary data
   if (!currentItem) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.errorContainer}>
-          <TouchableOpacity
-            onPress={() => navigation.goBack()}
-            style={styles.headerButton}
-          >
-            <Icon name="arrow-back" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.errorContent}>
-            <Icon name="alert-circle" size={64} color="#ef4444" />
-            <Text style={styles.errorText}>No Practice Items Available</Text>
-            <Text style={styles.errorSubtext}>
-              {category
-                ? `No items found in "${category}" category.`
-                : 'Please select a category first.'}
-            </Text>
+      <View style={styles.container}>
+        <LinearGradient
+          colors={['#1F2937', '#374151', '#4B5563']}
+          style={styles.backgroundGradient}
+        >
+          <SafeAreaView style={styles.errorSafeArea}>
             <TouchableOpacity
-              style={styles.errorButton}
-              onPress={() => navigation.navigate('CategorySelection')}
+              onPress={() => navigation.goBack()}
+              style={styles.headerButton}
             >
-              <Text style={styles.errorButtonText}>Choose Category</Text>
+              <View style={styles.headerButtonInner}>
+                <Icon name="arrow-back" size={24} color="white" />
+              </View>
             </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
+            <View style={styles.errorContent}>
+              <Icon name="alert-circle" size={64} color="#ef4444" />
+              <Text style={styles.errorText}>No Practice Items Available</Text>
+              <Text style={styles.errorSubtext}>
+                {category
+                  ? `No items found in "${category}" category.`
+                  : 'Please select a category first.'}
+              </Text>
+              <TouchableOpacity
+                style={styles.errorButton}
+                onPress={() => navigation.navigate('CategorySelection')}
+              >
+                <Text style={styles.errorButtonText}>Choose Category</Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </LinearGradient>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Background with Gradient */}
-      <LinearGradient
-        colors={['#312e81', '#581c87', '#be185d']}
-        style={styles.background}
-      >
-        {/* Background Effects */}
-        <View style={styles.backgroundEffects}>
-          <View style={[styles.backgroundCircle, styles.circle1]} />
-          <View style={[styles.backgroundCircle, styles.circle2]} />
-          <View style={[styles.backgroundCircle, styles.circle3]} />
-        </View>
+    <View style={styles.container}>
+      {/* Full-screen AR Camera Background */}
+      <View style={styles.arBackground}>
+        <ARModelViewer
+          key={currentItem.id}
+          item={{
+            ...currentItem,
+            scale: currentItem.scale as [number, number, number],
+            position: currentItem.position as [number, number, number],
+            rotation: currentItem.rotation as [number, number, number],
+            difficulty: currentItem.difficulty as 'easy' | 'medium' | 'hard',
+          }}
+          onModelLoaded={() =>
+            console.log('AR Model loaded for practice:', currentItem.word)
+          }
+          onModelTapped={() =>
+            console.log('AR Model tapped:', currentItem.word)
+          }
+        />
+      </View>
 
-        {/* Top Bar */}
+      {/* Fallback Gradient Background (behind AR) */}
+      <LinearGradient
+        colors={['#1F2937', '#374151', '#4B5563']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.fallbackBackground}
+        pointerEvents="none"
+      >
+        {/* Gradient Orbs */}
+        <View style={styles.orbsContainer}>
+          <View style={[styles.orb, styles.blueOrb]} />
+          <View style={[styles.orb, styles.purpleOrb]} />
+          <View style={[styles.orb, styles.greenOrb]} />
+        </View>
+      </LinearGradient>
+
+      {/* AR Grid Overlay */}
+      <Animated.View
+        style={[styles.gridOverlay, { opacity: gridOpacity }]}
+        pointerEvents="none"
+      >
+        {Array.from({ length: 20 }).map((_, i) => (
+          <View key={`h-${i}`} style={[styles.gridLine, { top: i * 40 }]} />
+        ))}
+        {Array.from({ length: 20 }).map((_, i) => (
+          <View
+            key={`v-${i}`}
+            style={[styles.gridLineVertical, { left: i * 40 }]}
+          />
+        ))}
+      </Animated.View>
+
+      {/* Floating Header */}
+      <SafeAreaView style={styles.headerSafeArea}>
         <View style={styles.header}>
           <TouchableOpacity
             style={styles.headerButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color="white" />
+            <View style={styles.headerButtonInner}>
+              <Icon name="arrow-back" size={24} color="white" />
+            </View>
           </TouchableOpacity>
 
           <View style={styles.speechTestIndicator}>
@@ -461,183 +538,166 @@ export default function SpeechAssessmentScreen({
             style={styles.headerButton}
             onPress={() => navigation.navigate('Home')}
           >
-            <Icon name="close" size={24} color="white" />
+            <View style={styles.headerButtonInner}>
+              <Icon name="close" size={24} color="white" />
+            </View>
           </TouchableOpacity>
         </View>
+      </SafeAreaView>
 
-        {/* AR Model Viewer Container */}
-        <View style={styles.arContainer}>
-          <Animated.View
-            style={[
-              styles.arViewerWrapper,
-              {
-                transform: [
-                  { scale: scaleAnim },
-                  { rotate: rotateInterpolate },
-                ],
-              },
-            ]}
-          >
-            <ARModelViewer
-              key={currentItem.id} // Force remount when item changes
-              item={{
-                ...currentItem,
-                scale: currentItem.scale as [number, number, number],
-                position: currentItem.position as [number, number, number],
-                rotation: currentItem.rotation as [number, number, number],
-                difficulty: currentItem.difficulty as
-                  | 'easy'
-                  | 'medium'
-                  | 'hard',
-              }}
-              onModelLoaded={() =>
-                console.log('AR Model loaded for practice:', currentItem.word)
-              }
-              onModelTapped={() =>
-                console.log('AR Model tapped:', currentItem.word)
-              }
+      {/* Recording Status Overlay */}
+      {assessmentState.isRecording && (
+        <View style={styles.recordingOverlay}>
+          <View style={styles.recordingIndicator}>
+            <Animated.View
+              style={[
+                styles.recordingDot,
+                { transform: [{ scale: pulseAnim }] },
+              ]}
             />
-
-            {/* AR Practice Indicators */}
-            <View style={styles.arIndicators}>
-              <View style={[styles.arMarker, styles.topLeft]} />
-              <View style={[styles.arMarker, styles.topRight]} />
-              <View style={[styles.arMarker, styles.bottomLeft]} />
-              <View style={[styles.arMarker, styles.bottomRight]} />
-            </View>
-          </Animated.View>
+            <Text style={styles.recordingText}>🎤 Listening...</Text>
+          </View>
         </View>
+      )}
 
-        {/* Word Display */}
-        <View style={styles.wordDisplay}>
-          <Text style={styles.instructionText}>Practice saying:</Text>
-          <Text style={styles.wordText}>{currentItem.word}</Text>
-          <Text style={styles.phoneticText}>{currentItem.phonetic}</Text>
+      {assessmentState.isProcessing && (
+        <View style={styles.recordingOverlay}>
+          <View style={styles.recordingIndicator}>
+            <ActivityIndicator size="small" color="#f59e0b" />
+            <Text style={styles.recordingText}>
+              🧠 Analyzing pronunciation...
+            </Text>
+          </View>
         </View>
+      )}
 
-        {/* Recording Button */}
-        <Animated.View
-          style={[
-            styles.recordButtonContainer,
-            {
-              transform: [{ scale: pulseAnim }],
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[
-              styles.recordButton,
-              assessmentState.isRecording && styles.recordButtonActive,
-              assessmentState.isProcessing && styles.recordButtonProcessing,
-            ]}
-            onPress={startPronunciationAssessment}
-            disabled={
-              assessmentState.isRecording || assessmentState.isProcessing
-            }
-          >
-            <LinearGradient
-              colors={
-                assessmentState.isRecording
-                  ? ['#ef4444', '#dc2626']
-                  : assessmentState.isProcessing
-                  ? ['#f59e0b', '#d97706']
-                  : ['#10b981', '#059669']
-              }
-              style={styles.recordButtonGradient}
+      {/* Floating Bottom Card with Controls */}
+      <View style={styles.bottomCard}>
+        <View style={styles.bottomCardContent}>
+          {/* Word Info */}
+          <View style={styles.wordInfo}>
+            <Text style={styles.instructionText}>Practice saying:</Text>
+            <Animated.Text
+              style={[styles.wordText, { transform: [{ scale: scaleAnim }] }]}
             >
-              {assessmentState.isProcessing ? (
-                <ActivityIndicator size="large" color="white" />
-              ) : (
-                <Icon
-                  name={assessmentState.isRecording ? 'stop' : 'mic'}
-                  size={48}
-                  color="white"
+              {currentItem.word}
+            </Animated.Text>
+            <Text style={styles.phoneticText}>{currentItem.phonetic}</Text>
+          </View>
+
+          {/* Recording Button */}
+          <View style={styles.recordButtonContainer}>
+            <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
+              <TouchableOpacity
+                style={[
+                  styles.recordButton,
+                  assessmentState.isRecording && styles.recordButtonActive,
+                  assessmentState.isProcessing && styles.recordButtonProcessing,
+                ]}
+                onPress={startPronunciationAssessment}
+                disabled={
+                  assessmentState.isRecording || assessmentState.isProcessing
+                }
+              >
+                <LinearGradient
+                  colors={
+                    assessmentState.isRecording
+                      ? ['#ef4444', '#dc2626']
+                      : assessmentState.isProcessing
+                      ? ['#f59e0b', '#d97706']
+                      : ['#10b981', '#059669']
+                  }
+                  style={styles.recordButtonGradient}
+                >
+                  {assessmentState.isProcessing ? (
+                    <ActivityIndicator size="large" color="white" />
+                  ) : (
+                    <Icon
+                      name={assessmentState.isRecording ? 'stop' : 'mic'}
+                      size={36}
+                      color="white"
+                    />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </Animated.View>
+            <Text style={styles.recordButtonLabel}>
+              {assessmentState.isRecording
+                ? 'Recording...'
+                : assessmentState.isProcessing
+                ? 'Processing...'
+                : 'Tap to Speak'}
+            </Text>
+          </View>
+
+          {/* Navigation Buttons */}
+          <View style={styles.navigationButtons}>
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={handlePreviousWord}
+              disabled={
+                assessmentState.isRecording || assessmentState.isProcessing
+              }
+            >
+              <LinearGradient
+                colors={['#6b7280', '#4b5563']}
+                style={styles.navButtonGradient}
+              >
+                <Icon name="play-back" size={20} color="white" />
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={handleNextWord}
+              disabled={
+                assessmentState.isRecording || assessmentState.isProcessing
+              }
+            >
+              <LinearGradient
+                colors={['#3b82f6', '#6366f1']}
+                style={styles.nextButtonGradient}
+              >
+                <Icon name="play-forward" size={24} color="white" />
+                <Text style={styles.nextButtonText}>Next Word</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.navButton}
+              onPress={() => navigation.navigate('Home')}
+            >
+              <LinearGradient
+                colors={['#ef4444', '#dc2626']}
+                style={styles.navButtonGradient}
+              >
+                <Icon name="home" size={20} color="white" />
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Progress Indicator */}
+          <View style={styles.progressContainer}>
+            <Text style={styles.progressText}>
+              {currentIndex + 1} of {items.length}
+            </Text>
+            <View style={styles.progressDots}>
+              {items.slice(0, Math.min(items.length, 10)).map((_, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.progressDot,
+                    index === currentIndex && styles.progressDotActive,
+                  ]}
                 />
+              ))}
+              {items.length > 10 && (
+                <Text style={styles.progressMoreText}>...</Text>
               )}
-            </LinearGradient>
-          </TouchableOpacity>
-        </Animated.View>
-
-        {/* Status Text */}
-        {assessmentState.isRecording && (
-          <Text style={styles.statusText}>🎤 Listening...</Text>
-        )}
-        {assessmentState.isProcessing && (
-          <Text style={styles.statusText}>🧠 Analyzing pronunciation...</Text>
-        )}
-
-        {/* Bottom Controls */}
-        <View style={styles.bottomControls}>
-          <LinearGradient
-            colors={['rgba(255, 255, 255, 0.95)', 'rgba(255, 255, 255, 0.9)']}
-            style={styles.controlsGradient}
-          >
-            {/* Navigation Buttons */}
-            <View style={styles.navigationButtons}>
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={handlePreviousWord}
-                disabled={
-                  assessmentState.isRecording || assessmentState.isProcessing
-                }
-              >
-                <LinearGradient
-                  colors={['#6b7280', '#4b5563']}
-                  style={styles.navButtonGradient}
-                >
-                  <Icon name="play-back" size={20} color="white" />
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.nextButton}
-                onPress={handleNextWord}
-                disabled={
-                  assessmentState.isRecording || assessmentState.isProcessing
-                }
-              >
-                <LinearGradient
-                  colors={['#3b82f6', '#6366f1']}
-                  style={styles.nextButtonGradient}
-                >
-                  <Icon name="play-forward" size={24} color="white" />
-                  <Text style={styles.nextButtonText}>Next Word</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.navButton}
-                onPress={() => navigation.navigate('Home')}
-              >
-                <LinearGradient
-                  colors={['#ef4444', '#dc2626']}
-                  style={styles.navButtonGradient}
-                >
-                  <Icon name="home" size={20} color="white" />
-                </LinearGradient>
-              </TouchableOpacity>
             </View>
-
-            {/* Progress Indicator */}
-            <View style={styles.progressContainer}>
-              <Text style={styles.progressText}>
-                {currentIndex + 1} of {items.length}
-              </Text>
-              <View style={styles.progressDots}>
-                {items.map((_, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.progressDot,
-                      index === currentIndex && styles.progressDotActive,
-                    ]}
-                  />
-                ))}
-              </View>
-            </View>
-          </LinearGradient>
+          </View>
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Advanced Feedback Modal */}
       <Modal
@@ -819,49 +879,105 @@ export default function SpeechAssessmentScreen({
           </Animated.View>
         </View>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#1F2937',
   },
-  background: {
-    flex: 1,
-  },
-  backgroundEffects: {
+  // Full-screen AR Background
+  arBackground: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    zIndex: 1,
   },
-  backgroundCircle: {
+  backgroundGradient: {
+    flex: 1,
+  },
+  fallbackBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+    opacity: 0.5,
+  },
+  orbsContainer: {
+    ...StyleSheet.absoluteFillObject,
+    opacity: 0.2,
+  },
+  orb: {
     position: 'absolute',
     borderRadius: 999,
-    opacity: 0.3,
   },
-  circle1: {
-    width: 128,
-    height: 128,
-    backgroundColor: '#fbbf24',
+  blueOrb: {
     top: 80,
     left: 40,
+    width: 128,
+    height: 128,
+    backgroundColor: '#3b82f6',
+    transform: [{ scale: 2 }],
+    opacity: 0.6,
   },
-  circle2: {
+  purpleOrb: {
+    bottom: 200,
+    right: 40,
     width: 160,
     height: 160,
-    backgroundColor: '#06b6d4',
-    bottom: 160,
-    right: 40,
+    backgroundColor: '#8b5cf6',
+    transform: [{ scale: 2 }],
+    opacity: 0.6,
   },
-  circle3: {
-    width: 192,
-    height: 192,
-    backgroundColor: '#ec4899',
-    top: '33%',
-    left: '33%',
+  greenOrb: {
+    top: '40%',
+    left: '30%',
+    width: 200,
+    height: 200,
+    backgroundColor: '#10b981',
+    transform: [{ scale: 2 }],
+    opacity: 0.3,
+  },
+  gridOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 2,
+    opacity: 0.1,
+  },
+  gridLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  gridLineVertical: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  // Floating Header
+  headerSafeArea: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  errorSafeArea: {
+    flex: 1,
+    padding: spacing.lg,
   },
   header: {
     flexDirection: 'row',
@@ -869,27 +985,32 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
-    zIndex: 10,
+    paddingBottom: spacing.sm,
   },
   headerButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    overflow: 'hidden',
+  },
+  headerButtonInner: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 24,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
   },
   speechTestIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
     gap: spacing.sm,
   },
   speechTestText: {
@@ -897,92 +1018,88 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.medium,
   },
-  // AR Container Styles
-  arContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    position: 'relative',
-  },
-  arViewerWrapper: {
-    width: '100%',
-    height: 300,
-    position: 'relative',
-  },
-  arIndicators: {
+  // Recording Status Overlay
+  recordingOverlay: {
     position: 'absolute',
-    top: 0,
+    top: 120,
     left: 0,
     right: 0,
-    bottom: 0,
-    pointerEvents: 'none',
-  },
-  arMarker: {
-    position: 'absolute',
-    width: 24,
-    height: 24,
-    borderColor: '#fbbf24',
-    borderWidth: 4,
-  },
-  topLeft: {
-    top: 8,
-    left: 8,
-    borderRightWidth: 0,
-    borderBottomWidth: 0,
-  },
-  topRight: {
-    top: 8,
-    right: 8,
-    borderLeftWidth: 0,
-    borderBottomWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 8,
-    left: 8,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-  },
-  bottomRight: {
-    bottom: 8,
-    right: 8,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-  },
-  // Word Display Styles
-  wordDisplay: {
     alignItems: 'center',
-    marginBottom: spacing.xl,
+    zIndex: 15,
+  },
+  recordingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
     paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.full,
+    gap: spacing.sm,
+  },
+  recordingDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#ef4444',
+  },
+  recordingText: {
+    color: 'white',
+    fontSize: typography.fontSizes.base,
+    fontWeight: typography.fontWeights.medium,
+  },
+  // Floating Bottom Card
+  bottomCard: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    marginHorizontal: spacing.md,
+    marginBottom: spacing.lg,
+    borderRadius: borderRadius['3xl'],
+    overflow: 'hidden',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    ...shadows.xl,
+  },
+  bottomCardContent: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
+  },
+  wordInfo: {
+    alignItems: 'center',
+    marginBottom: spacing.md,
   },
   instructionText: {
-    fontSize: typography.fontSizes.lg,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginBottom: spacing.sm,
+    color: colors.mutedForeground,
+    fontSize: typography.fontSizes.sm,
+    marginBottom: spacing.xs,
+    fontWeight: typography.fontWeights.medium,
   },
   wordText: {
-    fontSize: typography.fontSizes['4xl'],
-    fontWeight: typography.fontWeights.bold,
-    color: 'white',
+    color: '#7C3AED',
+    fontSize: 32,
+    fontWeight: 'bold',
     marginBottom: spacing.xs,
+    letterSpacing: 0.5,
   },
   phoneticText: {
-    fontSize: typography.fontSizes.lg,
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: 'rgba(0, 0, 0, 0.6)',
+    fontSize: typography.fontSizes.base,
     fontStyle: 'italic',
   },
-  // Recording Button Styles
+  // Recording Button
   recordButtonContainer: {
+    alignItems: 'center',
     marginBottom: spacing.lg,
   },
   recordButton: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
     overflow: 'hidden',
     ...shadows.xl,
     borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.5)',
+    borderColor: 'rgba(16, 185, 129, 0.5)',
   },
   recordButtonActive: {
     borderColor: 'rgba(239, 68, 68, 0.8)',
@@ -995,29 +1112,18 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  statusText: {
-    color: 'white',
-    fontSize: typography.fontSizes.lg,
+  recordButtonLabel: {
+    marginTop: spacing.sm,
+    color: colors.mutedForeground,
+    fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.medium,
-    textAlign: 'center',
   },
-  // Bottom Controls Styles
-  bottomControls: {
-    borderTopLeftRadius: borderRadius['3xl'],
-    borderTopRightRadius: borderRadius['3xl'],
-    overflow: 'hidden',
-    ...shadows.xl,
-  },
-  controlsGradient: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.lg,
-  },
+  // Navigation Buttons
   navigationButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.lg,
+    marginBottom: spacing.md,
     gap: spacing.md,
   },
   navButton: {
@@ -1034,7 +1140,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     flex: 1,
-    height: 64,
+    height: 56,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     ...shadows.lg,
@@ -1048,9 +1154,10 @@ const styles = StyleSheet.create({
   },
   nextButtonText: {
     color: 'white',
-    fontSize: typography.fontSizes.lg,
+    fontSize: typography.fontSizes.base,
     fontWeight: typography.fontWeights.semibold,
   },
+  // Progress
   progressContainer: {
     alignItems: 'center',
   },
@@ -1062,24 +1169,25 @@ const styles = StyleSheet.create({
   progressDots: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: spacing.sm,
+    alignItems: 'center',
+    gap: spacing.xs,
   },
   progressDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: colors.muted,
+    backgroundColor: 'rgba(0, 0, 0, 0.2)',
   },
   progressDotActive: {
-    width: 32,
+    width: 24,
     backgroundColor: colors.primary,
   },
-  // Error State Styles
-  errorContainer: {
-    flex: 1,
-    padding: spacing.lg,
-    backgroundColor: '#1f2937',
+  progressMoreText: {
+    color: colors.mutedForeground,
+    fontSize: typography.fontSizes.xs,
+    marginLeft: spacing.xs,
   },
+  // Error State
   errorContent: {
     flex: 1,
     justifyContent: 'center',
@@ -1108,7 +1216,7 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSizes.base,
     fontWeight: typography.fontWeights.semibold,
   },
-  // Feedback Modal Styles
+  // Feedback Modal
   feedbackOverlay: {
     flex: 1,
     justifyContent: 'center',
@@ -1139,7 +1247,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
     textAlign: 'center',
   },
-  // Score Breakdown Styles
+  // Score Breakdown
   scoreBreakdown: {
     width: '100%',
     marginBottom: spacing.lg,
@@ -1175,7 +1283,7 @@ const styles = StyleSheet.create({
     width: '15%',
     textAlign: 'right',
   },
-  // Recognition Details Styles
+  // Recognition Details
   recognitionDetails: {
     width: '100%',
     marginBottom: spacing.lg,
@@ -1204,7 +1312,7 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: typography.fontWeights.semibold,
   },
-  // Star Animation Styles
+  // Stars
   starsContainer: {
     flexDirection: 'row',
     gap: spacing.sm,
@@ -1213,7 +1321,7 @@ const styles = StyleSheet.create({
   star: {
     fontSize: 24,
   },
-  // Close Button Styles
+  // Close Button
   closeButton: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     paddingHorizontal: spacing.lg,

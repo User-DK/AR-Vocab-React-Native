@@ -256,9 +256,7 @@ export default function ARLearningScreen({
 
       // Check if sound path exists
       if (!currentItem.soundPath) {
-        console.warn(
-          `⚠️ No sound path for: ${currentItem.word}`,
-        );
+        console.warn(`⚠️ No sound path for: ${currentItem.word}`);
         setIsPlaying(false);
         return;
       }
@@ -268,44 +266,48 @@ export default function ARLearningScreen({
       // vocabulary-data.json has: "sounds/Lion.mp3" or "sounds/lion.mp3"
       // Convert to raw resource name: "lion" (lowercase, no extension)
       let rawName = currentItem.soundPath
-        .replace(/^sounds\//, '')  // Remove "sounds/" prefix
-        .replace(/\.mp3$/i, '')    // Remove .mp3 extension
-        .toLowerCase()             // Convert to lowercase
-        .replace(/-/g, '_')        // Replace hyphens with underscores
-        .replace(/\s+/g, '_');     // Replace spaces with underscores
-      
+        .replace(/^sounds\//, '') // Remove "sounds/" prefix
+        .replace(/\.mp3$/i, '') // Remove .mp3 extension
+        .toLowerCase() // Convert to lowercase
+        .replace(/-/g, '_') // Replace hyphens with underscores
+        .replace(/\s+/g, '_'); // Replace spaces with underscores
+
       console.log('✅ Loading sound from raw:', rawName);
       console.log('   Original path:', currentItem.soundPath);
 
       // On Android, pass empty string as basePath to load from res/raw
       // The file should be at: android/app/src/main/res/raw/{rawName}.mp3
-      const soundFile = new Sound(rawName + '.mp3', Sound.MAIN_BUNDLE, error => {
-        if (error) {
-          console.error('❌ Failed to load sound:', error);
-          Alert.alert(
-            'Audio Error',
-            `Failed to load sound for "${currentItem.word}". Please try again.`,
-          );
-          setIsPlaying(false);
-          return;
-        }
-
-        console.log('✅ Sound file loaded successfully');
-        console.log('Duration:', soundFile.getDuration(), 'seconds');
-
-        // Play the sound
-        soundFile.play(success => {
-          if (success) {
-            console.log('✅ Sound played successfully');
-            triggerSparkle();
-          } else {
-            console.log('⚠️ Sound playback failed');
+      const soundFile = new Sound(
+        rawName + '.mp3',
+        Sound.MAIN_BUNDLE,
+        error => {
+          if (error) {
+            console.error('❌ Failed to load sound:', error);
+            Alert.alert(
+              'Audio Error',
+              `Failed to load sound for "${currentItem.word}". Please try again.`,
+            );
+            setIsPlaying(false);
+            return;
           }
-          setIsPlaying(false);
-        });
 
-        setSound(soundFile);
-      });
+          console.log('✅ Sound file loaded successfully');
+          console.log('Duration:', soundFile.getDuration(), 'seconds');
+
+          // Play the sound
+          soundFile.play(success => {
+            if (success) {
+              console.log('✅ Sound played successfully');
+              triggerSparkle();
+            } else {
+              console.log('⚠️ Sound playback failed');
+            }
+            setIsPlaying(false);
+          });
+
+          setSound(soundFile);
+        },
+      );
     } catch (error) {
       console.error('Error playing sound:', error);
       Alert.alert('Audio Error', 'Failed to play sound. Please try again.');

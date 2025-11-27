@@ -140,9 +140,7 @@ export const ARModelViewer: React.FC<ARModelViewerProps> = ({
       {!trackingInitialized && (
         <View style={styles.trackingOverlay}>
           <ActivityIndicator size="small" color="#ffffff" />
-          <Text style={styles.trackingText}>
-            Loading AR model...
-          </Text>
+          <Text style={styles.trackingText}>Loading AR model...</Text>
         </View>
       )}
 
@@ -400,7 +398,7 @@ const ARSceneComponent: React.FC<ARSceneComponentProps> = ({
                 onClick={handleModelTap}
                 lightReceivingBitMask={1}
                 shadowCastingBitMask={1}
-                animation={{name: 'rotate', run: true, loop: true}}
+                animation={{ name: 'rotate', run: true, loop: true }}
               />
             </>
           ) : (
